@@ -1,0 +1,15 @@
+# Node / React
+/frontend/node_modules/
+frontend/.env
+
+# Python / Backend
+/backend/venv/
+backend/__pycache__/
+backend/.env
+
+# IntelliJ / JetBrains IDE
+.idea/
+*.iml
+
+# General
+.DS_Store

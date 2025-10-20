@@ -147,8 +147,7 @@ npm run dev
 You should see:
 
 * The "AI Search Dev" heading.
-* Text: `Frontend is working ✅`
-* Placeholder list item (`Backend not running`) if backend isn’t active.
+* A search bar
 
 > **Note:** At this stage, the frontend is fully decoupled from the backend. You can safely modify components or styles without breaking future integration.
 
@@ -202,7 +201,7 @@ Backend will run at `http://localhost:5000`.
 curl "http://localhost:5000/search?q=test"
 ```
 
-You should see JSON mock results.
+You should see a search bar and subsequent results.
 
 2. Refresh the frontend page (`http://localhost:5173/`). Mock search results should now appear, confirming the integration works.
 
@@ -211,10 +210,10 @@ You should see JSON mock results.
 ## 4. Full Integration Test / Quickstart Guide
 
 1. Ensure `.env` in the frontend points to `http://localhost:5000`.
-2. Start both servers:
+2. Start both servers after cd-ing into each in separate terminals:
     - Frontend: `npm run dev`
-    - Backend: `uvicorn main:app --reload --port 5000`
+    - Backend: `uvicorn main:app --reload --port 5000` (remember to enter the virtual environment first: .\venv\Scripts\Activate.ps1)
 3. Open the frontend URL (`http://localhost:5173`) in a browser.  
-   If mock results display, the integration test passes.
+   If results display after entering a search query, the integration test passes.
 
 This confirms the frontend and backend communicate correctly, and the project is ready for further development.

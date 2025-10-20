@@ -23,10 +23,6 @@ The backend uses **Python** with **FastAPI** for a simple, performant API and **
 
 ---
 
-Here’s a concise, README-style project structure section with 1-line descriptions for each relevant file based on your current backend and frontend:
-
----
-
 ## Project Structure
 
 ### Backend

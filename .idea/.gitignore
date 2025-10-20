@@ -9,6 +9,8 @@ backend/.env
 
 # IntelliJ / JetBrains IDE
 .idea/
+!.idea/misc.xml
+!.idea/modules.xml
 *.iml
 
 # General

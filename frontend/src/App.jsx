@@ -1,26 +1,36 @@
-import { useEffect, useState } from 'react'
-import axios from 'axios'
+import React, { useState } from "react";
+import { searchQuery } from "./api/search.js";
+import SearchBar from "./components/SearchBar.jsx";
+import SearchResults from "./components/SearchResults.jsx";
 
-function App() {
-    const [results, setResults] = useState([])
+export default function App() {
+    const [results, setResults] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
-    useEffect(() => {
-        console.log("API URL is:", import.meta.env.VITE_API_URL)
-        const url = `${import.meta.env.VITE_API_URL}/search?q=test`
-        axios.get(url)
-            .then(res => setResults(res.data.results || []))
-            .catch(() => setResults([{ id: 0, title: "Backend not running" }]))
-    }, [])
+    const handleSearch = async (query) => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const data = await searchQuery(query);
+            setResults(data);
+        } catch (err) {
+            console.error(err);
+            setError("Failed to fetch results. Is the backend running?");
+            setResults([]);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
-        <div className="p-4">
+        <div className="p-4 max-w-3xl mx-auto">
             <h1 className="text-3xl font-bold text-blue-600 mb-4">AI Search Dev</h1>
-            <p className="mb-2 text-gray-700">Frontend is working ✅</p>
-            <ul className="list-disc pl-5">
-                {results.map(r => <li key={r.id}>{r.title}</li>)}
-            </ul>
+            <SearchBar onSearch={handleSearch} />
+            {loading && <p className="text-gray-500">Loading results...</p>}
+            {error && <p className="text-red-500">{error}</p>}
+            <SearchResults results={results} />
         </div>
-    )
+    );
 }
-
-export default App

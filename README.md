@@ -23,6 +23,58 @@ The backend uses **Python** with **FastAPI** for a simple, performant API and **
 
 ---
 
+Here’s a concise, README-style project structure section with 1-line descriptions for each relevant file based on your current backend and frontend:
+
+---
+
+## Project Structure
+
+### Backend
+
+```
+backend/
+├─ main.py            # Sets up FastAPI, CORS middleware, and includes API routes
+├─ api/
+│  ├─ __init__.py     # Marks `api` as a Python package
+│  └─ routes.py       # Defines HTTP endpoints (currently /search) and calls the search service
+├─ services/
+│  ├─ __init__.py     # Marks `services` as a Python package
+│  ├─ google_api.py   # Encapsulates Google Custom Search API calls
+│  └─ search_service.py # Implements the search pipeline, currently proxies to Google API
+├─ .env               # Environment variables (Google API key, CX, etc.)
+├─ requirements.txt   # Python dependencies
+└─ venv/              # Virtual environment (not committed)
+```
+
+---
+
+### Frontend
+
+```
+frontend/
+├─ src/
+│  ├─ api/
+│  │  └─ search.js          # Contains API call helper to backend /search endpoint
+│  ├─ components/
+│  │  ├─ SearchBar.jsx      # Search input form component
+│  │  └─ SearchResults.jsx  # Renders search results list
+│  ├─ App.jsx               # Main React app, manages state and ties components together
+│  └─ main.jsx              # React entry point, renders <App /> into DOM
+├─ index.html               # HTML shell for Vite/React
+├─ package.json             # Frontend dependencies and scripts
+├─ vite.config.js           # Vite configuration
+└─ .env                     # Frontend environment variables (e.g., VITE_API_URL)
+```
+
+---
+
+This structure:
+
+* Keeps backend modular and extensible: `main.py` is minimal, API routes and services are separated.
+* Frontend components and API calls are isolated for easy expansion.
+* `.env` usage centralizes sensitive keys and configuration.
+* We don’t use a `src/` folder in the backend because keeping `main.py` and packages at the root avoids import issues with FastAPI and Uvicorn, making module paths simpler and easier to run.
+
 ## Frontend + Backend Setup (Integration Test)
 
 This guide explains how to set up the frontend and backend environments and run the integration test for AI-Search-Engine, confirming that the frontend can successfully call the backend.
@@ -62,6 +114,7 @@ cd AI-Search-Engine
 ```bash
 cd frontend
 npm install
+npm install axios # Make sure Axios is installed (used for API calls)
 ```
 
 This installs React, TailwindCSS, Axios, and other required packages.
@@ -127,6 +180,8 @@ The repository includes `requirements.txt` with:
 fastapi
 uvicorn
 pymongo
+python-dotenv
+requests
 ```
 
 Install dependencies:
@@ -161,7 +216,7 @@ You should see JSON mock results.
 
 1. Ensure `.env` in the frontend points to `http://localhost:5000`.
 2. Start both servers:
-    - Frontend: `npm run dev` (open http://localhost:5173 in a browser)
+    - Frontend: `npm run dev`
     - Backend: `uvicorn main:app --reload --port 5000`
 3. Open the frontend URL (`http://localhost:5173`) in a browser.  
    If mock results display, the integration test passes.

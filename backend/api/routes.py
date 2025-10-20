@@ -1,12 +1,12 @@
-from fastapi import APIRouter
-from services.google_api import search_google
+from fastapi import APIRouter, Query
+from services.search_service import search  # absolute import
 
 router = APIRouter()
 
 @router.get("/search")
-async def search(q: str):
+async def search_endpoint(q: str = Query(..., description="Search query")):
     try:
-        results = search_google(q, num_results=5)
+        results = search(q)
         return {"results": results}
     except Exception as e:
         return {"results": [], "error": str(e)}

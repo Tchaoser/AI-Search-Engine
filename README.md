@@ -30,9 +30,11 @@ The backend uses **Python** with **FastAPI** for a simple, performant API and **
 ```
 backend/
 ├─ main.py            # Sets up FastAPI, CORS middleware, and includes API routes
+│
 ├─ api/
 │  ├─ __init__.py     # Marks `api` as a Python package
 │  └─ routes.py       # Defines HTTP endpoints (currently /search) and calls the search service
+│
 ├─ services/
 │  ├─ __init__.py     # Marks `services` as a Python package
 │  ├─ google_api.py   # Encapsulates Google Custom Search API calls
@@ -50,16 +52,24 @@ backend/
 frontend/
 ├─ src/
 │  ├─ api/
-│  │  └─ search.js          # Contains API call helper to backend /search endpoint
+│  │  └─ search.js              # Handles API calls to backend /search endpoint
+│  │
 │  ├─ components/
-│  │  ├─ SearchBar.jsx      # Search input form component
-│  │  └─ SearchResults.jsx  # Renders search results list
-│  ├─ App.jsx               # Main React app, manages state and ties components together
-│  └─ main.jsx              # React entry point, renders <App /> into DOM
-├─ index.html               # HTML shell for Vite/React
-├─ package.json             # Frontend dependencies and scripts
-├─ vite.config.js           # Vite configuration
-└─ .env                     # Frontend environment variables (e.g., VITE_API_URL)
+│  │  ├─ SearchBar.jsx          # User input component for entering search queries
+│  │  ├─ SearchResults.jsx      # Displays formatted list of search results
+│  │  └─ Navbar.jsx             # Navigation bar with links to Search, Profile, and Settings pages
+│  │
+│  ├─ pages/
+│  │  ├─ SearchPage.jsx         # Main search page with query logic and result display
+│  │  ├─ UserProfilePage.jsx    # Placeholder for user interests and search history view/edit
+│  │  └─ SettingsPage.jsx       # Placeholder for privacy and personalization settings
+│  │
+│  ├─ App.jsx                   # Defines routes and overall layout (wraps all pages with Navbar)
+│  └─ main.jsx                  # React entry point, mounts <App /> into DOM
+├─ index.html                   # Root HTML shell for Vite (loads /src/main.jsx)
+├─ package.json                 # Project metadata, dependencies, and scripts
+├─ vite.config.js               # Vite build and dev server configuration
+└─ .env                         # Frontend environment variables (e.g., VITE_API_URL)
 ```
 
 ---

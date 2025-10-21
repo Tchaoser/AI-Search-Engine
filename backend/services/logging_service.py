@@ -1,17 +1,11 @@
-from datetime import datetime
-import uuid
 from services.db import queries_col
-
-def make_query_doc(user_id: str, raw_text: str, enhanced_text: str = None):
-    return {
-        "_id": str(uuid.uuid4()),
-        "user_id": user_id,
-        "raw_text": raw_text,
-        "enhanced_text": enhanced_text,
-        "timestamp": datetime.utcnow().isoformat(),
-    }
+from models.data_models import make_query_doc
 
 def log_query(user_id: str, raw_text: str, enhanced_text: str = None):
+    """
+    Create a query document and insert it into MongoDB.
+    Returns the inserted document's ID.
+    """
     try:
         doc = make_query_doc(user_id, raw_text, enhanced_text)
         queries_col.insert_one(doc)

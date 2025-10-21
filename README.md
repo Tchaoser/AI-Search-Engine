@@ -29,19 +29,23 @@ The backend uses **Python** with **FastAPI** for a simple, performant API and **
 
 ```
 backend/
-├─ main.py            # Sets up FastAPI, CORS middleware, and includes API routes
+├─ main.py               # Sets up FastAPI, CORS middleware, and includes API routes
 │
 ├─ api/
-│  ├─ __init__.py     # Marks `api` as a Python package
-│  └─ routes.py       # Defines HTTP endpoints (currently /search) and calls the search service
+│  ├─ __init__.py        # Marks `api` as a Python package
+│  └─ routes.py          # Defines HTTP endpoints (eg. /search) and utilizes services
+│
+├─ models/
+│  └─ data_models.py    # MongoDB document schemas for queries
 │
 ├─ services/
-│  ├─ __init__.py     # Marks `services` as a Python package
-│  ├─ google_api.py   # Encapsulates Google Custom Search API calls
-│  └─ search_service.py # Implements the search pipeline, currently proxies to Google API
-├─ .env               # Environment variables (Google API key, CX, etc.)
-├─ requirements.txt   # Python dependencies
-└─ venv/              # Virtual environment (not committed)
+│  ├─ __init__.py       # Marks `services` as a Python package
+│  ├─ db.py             # MongoDB connection and collection handles
+│  ├─ google_api.py     # Google Custom Search API calls
+│  └─ search_service.py # Search pipeline (proxies to Google)
+├─ .env                 # Environment variables (Google API key, CX, etc.)
+├─ requirements.txt     # Python dependencies
+└─ venv/                # Virtual environment (not committed)
 ```
 
 ---

@@ -110,7 +110,6 @@ cd AI-Search-Engine
 ```bash
 cd frontend
 npm install
-npm install axios
 ```
 
 This installs React, TailwindCSS, Axios, and other required packages.

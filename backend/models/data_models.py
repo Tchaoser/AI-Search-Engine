@@ -26,3 +26,14 @@ def make_interaction_doc(user_id: str, query_id: str, clicked_url: str, rank: in
         "timestamp": datetime.utcnow().isoformat(),
         "action_type": "click",
     }
+
+def make_user_profile_doc(user_id, interests, query_history, click_history):
+    return {
+        "user_id": user_id,
+        "interests": interests,
+        "query_history": query_history,
+        "click_history": click_history,
+        "last_updated": datetime.utcnow().isoformat(),
+        "explicit_interests": [],
+        "embedding": None
+    }

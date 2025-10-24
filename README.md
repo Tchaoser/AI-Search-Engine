@@ -29,23 +29,28 @@ The backend uses **Python** with **FastAPI** for a simple, performant API and **
 
 ```
 backend/
-├─ main.py               # Sets up FastAPI, CORS middleware, and includes API routes
+├─ main.py                         # Sets up FastAPI, CORS middleware, and includes API routes
 │
 ├─ api/
-│  ├─ __init__.py        # Marks `api` as a Python package
-│  └─ routes.py          # Defines HTTP endpoints (eg. /search) and utilizes services
+│  ├─ __init__.py                  # Marks `api` as a Python package
+│  └─ routes.py                    # Defines HTTP endpoints (eg. /search, /profiles) and utilizes services
 │
 ├─ models/
-│  └─ data_models.py    # MongoDB document schemas for queries
+│  └─ data_models.py               # MongoDB document schemas (queries, interactions, user_profiles)
 │
 ├─ services/
-│  ├─ __init__.py       # Marks `services` as a Python package
-│  ├─ db.py             # MongoDB connection and collection handles
-│  ├─ google_api.py     # Google Custom Search API calls
-│  └─ search_service.py # Search pipeline (proxies to Google)
-├─ .env                 # Environment variables (Google API key, CX, etc.)
-├─ requirements.txt     # Python dependencies
-└─ venv/                # Virtual environment (not committed)
+│  ├─ __init__.py                  # Marks `services` as a Python package
+│  ├─ db.py                        # MongoDB connection and collection handles
+│  ├─ google_api.py                # Google Custom Search API calls
+│  ├─ search_service.py            # Search pipeline (proxies to Google and logs queries/interactions)
+│  └─ user_profile_service.py      # Aggregates queries/clicks and builds per-user interest profiles
+│
+├─ scripts/
+│  └─ build_user_profiles.py       # Standalone script to rebuild profiles for all users from stored data
+│
+├─ .env                            # Environment variables (Google API key, CX, Mongo URI, etc.)
+├─ requirements.txt                # Python dependencies
+└─ venv/                           # Virtual environment (not committed)
 ```
 
 ---

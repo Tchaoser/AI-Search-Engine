@@ -53,13 +53,16 @@ def build_user_profile(user_id, query_weight=1.0, click_weight=2.0):
     for domain, v in clicks.items():
         interests[domain] = interests.get(domain, 0) + v * click_weight
 
+    existing_profile = user_profiles_col.find_one({"user_id": user_id}) or {}
+    explicit_interests = existing_profile.get("explicit_interests", [])
+
     profile_doc = {
         "user_id": user_id,
         "interests": interests,
         "query_history": list(keywords.keys()),
         "click_history": list(clicks.keys()),
         "last_updated": datetime.utcnow().isoformat(),
-        "explicit_interests": [],
+        "explicit_interests": explicit_interests,
         "embedding": None
     }
 

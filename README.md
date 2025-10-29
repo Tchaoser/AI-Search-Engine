@@ -72,9 +72,8 @@ frontend/
 │  │  ├─ UserProfilePage.jsx    # Placeholder for user interests and search history view/edit
 │  │  └─ SettingsPage.jsx       # Placeholder for privacy and personalization settings
 │  │
-│  ├─ App.css                   
 │  ├─ App.jsx                   # Defines routes and overall layout (wraps all pages with Navbar)
-│  └─ index.css                 
+│  └─ index.css                 # Global styles                 
 │  └─ main.jsx                  # React entry point, mounts <App /> into DOM
 ├─ index.html                   # Root HTML shell for Vite (loads /src/main.jsx)
 ├─ package.json                 # Project metadata, dependencies, and scripts

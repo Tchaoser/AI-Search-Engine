@@ -27,13 +27,16 @@ def make_interaction_doc(user_id: str, query_id: str, clicked_url: str, rank: in
         "action_type": "click",
     }
 
-def make_user_profile_doc(user_id, interests, query_history, click_history):
+def make_user_profile_doc(user_id, interests, query_history, click_history, explicit_interests=None):
+    """
+    Create a user profile document. Explicit interests are optional, default empty list.
+    """
     return {
         "user_id": user_id,
         "interests": interests,
         "query_history": query_history,
         "click_history": click_history,
         "last_updated": datetime.utcnow().isoformat(),
-        "explicit_interests": [],
+        "explicit_interests": explicit_interests or [],
         "embedding": None
     }

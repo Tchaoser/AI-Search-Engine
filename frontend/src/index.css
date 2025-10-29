@@ -139,6 +139,11 @@ body {
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); /* blue-300 */
 }
 
+.btn-fixed {
+    width: 10rem;
+}
+
+
 /* ----------------------------- */
 /* Inputs / Form Controls        */
 /* ----------------------------- */
@@ -207,4 +212,3 @@ body {
     background-color: rgba(0,0,0,0.15); /* darker imprint on hover */
     color: #1e293b; /* stronger contrast */
 }
-

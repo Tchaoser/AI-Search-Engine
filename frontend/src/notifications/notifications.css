@@ -1,0 +1,46 @@
+.notif-container {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    z-index: 9999;
+    pointer-events: none; /* let clicks through except for buttons inside */
+}
+
+.notif-toast {
+    pointer-events: auto;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    padding: 0.6rem 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    border-left: 4px solid #9ca3af; /* default accent */
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+.notif-body { flex: 1; }
+.notif-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.15rem; }
+.notif-message { font-size: 0.85rem; color: #374151; }
+
+/* type accents */
+.notif-success { border-left-color: #16a34a; }
+.notif-error { border-left-color: #dc2626; }
+.notif-info  { border-left-color: #2563eb; }
+
+/* close button */
+.notif-close {
+    background: transparent;
+    border: none;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    color: #6b7280;
+    padding: 0.2rem;
+    border-radius: 4px;
+}
+.notif-close:hover { color: #111827; }

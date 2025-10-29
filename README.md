@@ -60,25 +60,29 @@ backend/
 frontend/
 ├─ src/
 │  ├─ api/
-│  │  └─ search.js              # Handles API calls to backend /search endpoint
+│  │  └─ search.js                   # Handles API calls to backend /search endpoint
 │  │
 │  ├─ components/
-│  │  ├─ SearchBar.jsx          # User input component for entering search queries
-│  │  ├─ SearchResults.jsx      # Displays formatted list of search results
-│  │  └─ Navbar.jsx             # Navigation bar with links to Search, Profile, and Settings pages
+│  │  ├─ SearchBar.jsx               # User input component for entering search queries
+│  │  ├─ SearchResults.jsx           # Displays formatted list of search results
+│  │  └─ Navbar.jsx                  # Navigation bar with links to Search, Profile, and Settings pages
+│  │
+│  ├─ notifications/
+│  │  ├─ NotificationProvider.jsx    # React Context provider & hook for notifications
+│  │  └─ notifications.css           # Styles for notifications
 │  │
 │  ├─ pages/
-│  │  ├─ SearchPage.jsx         # Main search page with query logic and result display
-│  │  ├─ UserProfilePage.jsx    # Placeholder for user interests and search history view/edit
-│  │  └─ SettingsPage.jsx       # Placeholder for privacy and personalization settings
+│  │  ├─ SearchPage.jsx              # Main search page with query logic and result display
+│  │  ├─ UserProfilePage.jsx         # Placeholder for user interests and search history view/edit
+│  │  └─ SettingsPage.jsx            # Placeholder for privacy and personalization settings
 │  │
-│  ├─ App.jsx                   # Defines routes and overall layout (wraps all pages with Navbar)
-│  └─ index.css                 # Global styles                 
-│  └─ main.jsx                  # React entry point, mounts <App /> into DOM
-├─ index.html                   # Root HTML shell for Vite (loads /src/main.jsx)
-├─ package.json                 # Project metadata, dependencies, and scripts
-├─ vite.config.js               # Vite build and dev server configuration
-└─ .env                         # Frontend environment variables (e.g., VITE_API_URL)
+│  ├─ App.jsx                        # Defines routes and overall layout
+│  ├─ index.css                      # Global styles                 
+│  └─ main.jsx                       # React entry point, mounts <App /> into DOM
+├─ index.html                        # Root HTML shell for Vite (loads /src/main.jsx)
+├─ package.json                      # Project metadata, dependencies, and scripts
+├─ vite.config.js                    # Vite build and dev server configuration
+└─ .env                              # Frontend environment variables (e.g., VITE_API_URL)
 ```
 
 ---

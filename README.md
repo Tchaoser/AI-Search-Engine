@@ -16,7 +16,6 @@ This personalization aims to improve search relevance, reduce time spent finding
 
 - **React** – Component-based library for building responsive, dynamic web interfaces.
 - **Vite** – Lightweight build tool for fast development and hot module reloading.
-- **TailwindCSS** – Utility-first CSS framework for rapid, maintainable styling.
 
 These choices allow for quick prototyping of the frontend while keeping it modular, responsive, and easy to style.  
 The backend uses **Python** with **FastAPI** for a simple, performant API and **MongoDB** for storing user data.
@@ -68,7 +67,9 @@ frontend/
 │  │  ├─ UserProfilePage.jsx    # Placeholder for user interests and search history view/edit
 │  │  └─ SettingsPage.jsx       # Placeholder for privacy and personalization settings
 │  │
+│  ├─ App.css                   
 │  ├─ App.jsx                   # Defines routes and overall layout (wraps all pages with Navbar)
+│  └─ index.css                 
 │  └─ main.jsx                  # React entry point, mounts <App /> into DOM
 ├─ index.html                   # Root HTML shell for Vite (loads /src/main.jsx)
 ├─ package.json                 # Project metadata, dependencies, and scripts
@@ -143,7 +144,7 @@ VITE_API_URL=http://localhost:5000
 Make sure the following key files exist:
 
 * `src/App.jsx` – dummy component fetching `/search` results.
-* `src/index.css` – contains Tailwind imports or current styles.
+* `src/index.css` – contains current styles.
 * `vite.config.js` – default Vite + React configuration.
 * `package.json` – contains dependencies and dev scripts.
 

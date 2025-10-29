@@ -15,8 +15,8 @@ export default function SearchPage() {
 
         try {
             const data = await searchQuery(query);
-            setQueryId(data.query_id);
-            setResults(data.results);
+            setQueryId(data.query_id || null);
+            setResults(Array.isArray(data.results) ? data.results : []);
         } catch (err) {
             console.error(err);
             setError("Failed to fetch results. Is the backend running?");
@@ -28,10 +28,18 @@ export default function SearchPage() {
 
     return (
         <div>
+            <h2 className="text-2xl font-semibold mb-3 text-left">Search</h2>
+            <p className="text-subtle mb-4 text-left">
+                Enter a query to retrieve results. Click a result to log interactions.
+            </p>
+
             <SearchBar onSearch={handleSearch} />
-            {loading && <p className="text-gray-500 mt-2">Loading results...</p>}
-            {error && <p className="text-red-500 mt-2">{error}</p>}
-            <SearchResults results={results} query_id={queryId} />
+            {loading && <p className="text-muted mt-2">Loading results...</p>}
+            {error && <p className="text-red mt-2">{error}</p>}
+
+            <div className="mt-1">
+                <SearchResults results={results} query_id={queryId} />
+            </div>
         </div>
     );
 }

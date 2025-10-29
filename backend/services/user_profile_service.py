@@ -55,14 +55,21 @@ def build_user_profile(user_id, query_weight=1.0, click_weight=2.0):
 
     existing_profile = user_profiles_col.find_one({"user_id": user_id}) or {}
     explicit_interests = existing_profile.get("explicit_interests", [])
+    # read implicit exclusions (list of keywords to hide)
+    implicit_exclusions_raw = existing_profile.get("implicit_exclusions", [])
+    implicit_exclusions = set([e.lower() for e in implicit_exclusions_raw])
+
+    # filter out excluded implicit interests (case-insensitive)
+    filtered_interests = {k: v for k, v in interests.items() if k.lower() not in implicit_exclusions}
 
     profile_doc = {
         "user_id": user_id,
-        "interests": interests,
+        "interests": filtered_interests,
         "query_history": list(keywords.keys()),
         "click_history": list(clicks.keys()),
         "last_updated": datetime.utcnow().isoformat(),
         "explicit_interests": explicit_interests,
+        "implicit_exclusions": implicit_exclusions_raw,
         "embedding": None
     }
 
@@ -72,3 +79,4 @@ def build_user_profile(user_id, query_weight=1.0, click_weight=2.0):
         upsert=True
     )
     return profile_doc
+

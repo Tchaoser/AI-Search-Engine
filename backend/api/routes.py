@@ -23,7 +23,7 @@ async def log_click(user_id: str = Body(...), query_id: str = Body(...),
 # ----- User profile endpoints -----
 @router.get("/profiles/{user_id}")
 async def get_user_profile(user_id: str):
-    profile = build_user_profile(user_id)  # preserves explicit_interests
+    profile = build_user_profile(user_id)
     if not profile:
         raise HTTPException(status_code=404, detail="User profile not found")
     return profile
@@ -75,4 +75,26 @@ async def remove_explicit_interest(user_id: str = Body(...), keyword: str = Body
     profile = build_user_profile(user_id)
     profile["explicit_interests"] = [e for e in profile["explicit_interests"] if e["keyword"].lower() != keyword.lower()]
     user_profiles_col.update_one({"user_id": user_id}, {"$set": profile}, upsert=True)
+    return profile
+
+@router.delete("/profiles/implicit/remove")
+async def remove_implicit_interest(user_id: str = Body(...), keyword: str = Body(...)):
+    """
+    Persistently suppress an implicit interest for this user by adding the keyword
+    to `implicit_exclusions`. Then rebuild the profile and return it.
+    """
+    if not keyword:
+        raise HTTPException(status_code=400, detail="keyword required")
+
+    existing_profile = user_profiles_col.find_one({"user_id": user_id}) or {}
+    exclusions = existing_profile.get("implicit_exclusions", [])
+
+    # Add case-insensitively
+    if keyword.lower() not in [e.lower() for e in exclusions]:
+        exclusions.append(keyword)
+        user_profiles_col.update_one({"user_id": user_id}, {"$set": {"implicit_exclusions": exclusions}}, upsert=True)
+
+    # TODO: ensure future personalization algorithm excludes implicit_exclusions
+    # Rebuild profile (which will filter out exclusions)
+    profile = build_user_profile(user_id)
     return profile

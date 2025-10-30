@@ -26,7 +26,7 @@ export default function UserProfilePage() {
                 setExplicitInterests(profile.explicit_interests || []);
 
                 // Build sorted implicit array (descending by weight)
-                const sortedImplicit = Object.entries(profile.interests || {})
+                const sortedImplicit = Object.entries(profile.implicit_interests || {})
                     .sort(([, aWeight], [, bWeight]) => bWeight - aWeight)
                     .map(([keyword, weight]) => ({ keyword, weight }));
 
@@ -98,7 +98,7 @@ export default function UserProfilePage() {
             if (!res.ok) throw new Error(data.detail || "Remove failed");
 
             // After backend rebuilds profile, recompute top N implicit and set
-            const sortedImplicit = Object.entries(data.interests || {})
+            const sortedImplicit = Object.entries(profile.implicit_interests || {})
                 .sort(([, aWeight], [, bWeight]) => bWeight - aWeight)
                 .map(([keyword, weight]) => ({ keyword, weight }));
 

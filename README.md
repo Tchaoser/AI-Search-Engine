@@ -73,8 +73,8 @@ frontend/
 │  │
 │  ├─ pages/
 │  │  ├─ SearchPage.jsx              # Main search page with query logic and result display
-│  │  ├─ UserProfilePage.jsx         # Placeholder for user interests and search history view/edit
-│  │  └─ SettingsPage.jsx            # Placeholder for privacy and personalization settings
+│  │  ├─ UserProfilePage.jsx         # Page for user interests and search history view/edit
+│  │  └─ SettingsPage.jsx            # Placeholder page for privacy and personalization settings
 │  │
 │  ├─ App.jsx                        # Defines routes and overall layout
 │  ├─ index.css                      # Global styles                 

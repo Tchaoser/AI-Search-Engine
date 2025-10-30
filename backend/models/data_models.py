@@ -33,7 +33,7 @@ def make_user_profile_doc(user_id, interests, query_history, click_history, expl
     """
     return {
         "user_id": user_id,
-        "interests": interests,
+        "implicit_interests": interests,
         "query_history": query_history,
         "click_history": click_history,
         "last_updated": datetime.utcnow().isoformat(),

@@ -15,8 +15,8 @@ def run_profile_build():
     for uid in user_ids:
         print(f"\n🔄 Building profile for user: {uid}")
         profile = build_user_profile(uid)  # preserves explicit_interests
-        print(f"✅ Updated profile for {uid} with {len(profile['interests'])} interests")
-        print(f"   {list(profile['interests'].items())[:8]} ...")  # preview
+        print(f"✅ Updated profile for {uid} with {len(profile['implicit_interests'])} implicit interests")
+        print(f"   {list(profile['implicit_interests'].items())[:8]} ...")
 
     print("\n🏁 Done building all user profiles.")
 

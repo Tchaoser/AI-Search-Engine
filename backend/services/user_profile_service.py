@@ -64,7 +64,7 @@ def build_user_profile(user_id, query_weight=1.0, click_weight=2.0):
 
     profile_doc = {
         "user_id": user_id,
-        "interests": filtered_interests,
+        "implicit_interests": filtered_interests,
         "query_history": list(keywords.keys()),
         "click_history": list(clicks.keys()),
         "last_updated": datetime.utcnow().isoformat(),

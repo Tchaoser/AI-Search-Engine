@@ -5,21 +5,26 @@ export default function SearchBar({ onSearch }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (query.trim()) onSearch(query);
+        const trimmed = query.trim();
+        if (trimmed) onSearch(trimmed);
     };
 
     return (
-        <form onSubmit={handleSubmit} className="mb-4 flex gap-2">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-2" role="search">
+            <label htmlFor="search-input" className="sr-only">Search</label>
             <input
-                type="text"
+                id="search-input"
+                type="search"
+                autoComplete="off"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Enter your search query..."
-                className="flex-1 p-2 border border-gray-300 rounded"
+                className="input flex-1"
+                aria-label="Search query"
             />
             <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="btn btn-primary btn-focus w-full"
             >
                 Search
             </button>

@@ -16,7 +16,6 @@ This personalization aims to improve search relevance, reduce time spent finding
 
 - **React** – Component-based library for building responsive, dynamic web interfaces.
 - **Vite** – Lightweight build tool for fast development and hot module reloading.
-- **TailwindCSS** – Utility-first CSS framework for rapid, maintainable styling.
 
 These choices allow for quick prototyping of the frontend while keeping it modular, responsive, and easy to style.  
 The backend uses **Python** with **FastAPI** for a simple, performant API and **MongoDB** for storing user data.
@@ -61,24 +60,29 @@ backend/
 frontend/
 ├─ src/
 │  ├─ api/
-│  │  └─ search.js              # Handles API calls to backend /search endpoint
+│  │  └─ search.js                   # Handles API calls to backend /search endpoint
 │  │
 │  ├─ components/
-│  │  ├─ SearchBar.jsx          # User input component for entering search queries
-│  │  ├─ SearchResults.jsx      # Displays formatted list of search results
-│  │  └─ Navbar.jsx             # Navigation bar with links to Search, Profile, and Settings pages
+│  │  ├─ SearchBar.jsx               # User input component for entering search queries
+│  │  ├─ SearchResults.jsx           # Displays formatted list of search results
+│  │  └─ Navbar.jsx                  # Navigation bar with links to Search, Profile, and Settings pages
+│  │
+│  ├─ notifications/
+│  │  ├─ NotificationProvider.jsx    # React Context provider & hook for notifications
+│  │  └─ notifications.css           # Styles for notifications
 │  │
 │  ├─ pages/
-│  │  ├─ SearchPage.jsx         # Main search page with query logic and result display
-│  │  ├─ UserProfilePage.jsx    # Placeholder for user interests and search history view/edit
-│  │  └─ SettingsPage.jsx       # Placeholder for privacy and personalization settings
+│  │  ├─ SearchPage.jsx              # Main search page with query logic and result display
+│  │  ├─ UserProfilePage.jsx         # Page for user interests and search history view/edit
+│  │  └─ SettingsPage.jsx            # Placeholder page for privacy and personalization settings
 │  │
-│  ├─ App.jsx                   # Defines routes and overall layout (wraps all pages with Navbar)
-│  └─ main.jsx                  # React entry point, mounts <App /> into DOM
-├─ index.html                   # Root HTML shell for Vite (loads /src/main.jsx)
-├─ package.json                 # Project metadata, dependencies, and scripts
-├─ vite.config.js               # Vite build and dev server configuration
-└─ .env                         # Frontend environment variables (e.g., VITE_API_URL)
+│  ├─ App.jsx                        # Defines routes and overall layout
+│  ├─ index.css                      # Global styles                 
+│  └─ main.jsx                       # React entry point, mounts <App /> into DOM
+├─ index.html                        # Root HTML shell for Vite (loads /src/main.jsx)
+├─ package.json                      # Project metadata, dependencies, and scripts
+├─ vite.config.js                    # Vite build and dev server configuration
+└─ .env                              # Frontend environment variables (e.g., VITE_API_URL)
 ```
 
 ---
@@ -148,7 +152,7 @@ VITE_API_URL=http://localhost:5000
 Make sure the following key files exist:
 
 * `src/App.jsx` – dummy component fetching `/search` results.
-* `src/index.css` – contains Tailwind imports or current styles.
+* `src/index.css` – contains current styles.
 * `vite.config.js` – default Vite + React configuration.
 * `package.json` – contains dependencies and dev scripts.
 

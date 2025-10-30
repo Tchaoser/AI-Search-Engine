@@ -3,10 +3,10 @@ import { logClick } from "../api/search.js";
 
 export default function SearchResults({ results, query_id, user_id = "guest" }) {
     if (!results || results.length === 0) {
-        return <p className="text-gray-500">No results yet. Try searching above.</p>;
+        return <p className="text-muted">No results yet. Try searching above.</p>;
     }
 
-    const handleClick = (e, r, index) => {
+    const handleClick = (r, index) => {
         logClick({
             user_id,
             query_id,
@@ -16,21 +16,24 @@ export default function SearchResults({ results, query_id, user_id = "guest" }) 
     };
 
     return (
-        <ul className="list-disc pl-5">
+        <div className="flex flex-col gap-2">
             {results.map((r, i) => (
-                <li key={i} className="mb-2">
+                <div
+                    key={i}
+                    className={`card-compact${i === 0 ? " mt-2" : ""}`}
+                >
                     <a
                         href={r.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
-                        onClick={(e) => handleClick(e, r, i)}
+                        className="text-blue font-medium text-base text-blue-hover"
+                        onClick={() => handleClick(r, i)}
                     >
-                        {r.title}
+                        {r.title || r.link}
                     </a>
-                    {r.snippet && <p className="text-gray-700">{r.snippet}</p>}
-                </li>
+                    {r.snippet && <p className="text-subtle mt-1">{r.snippet}</p>}
+                </div>
             ))}
-        </ul>
+        </div>
     );
 }

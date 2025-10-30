@@ -66,7 +66,7 @@ export default function UserProfilePage() {
             .finally(() => setNewInterest(""));
     };
 
-    const removeInterest = (keyword) => {
+    const removeExplicitInterest = (keyword) => {
         fetch(`${API_URL}/profiles/explicit/remove`, {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
@@ -98,7 +98,7 @@ export default function UserProfilePage() {
             if (!res.ok) throw new Error(data.detail || "Remove failed");
 
             // After backend rebuilds profile, recompute top N implicit and set
-            const sortedImplicit = Object.entries(profile.implicit_interests || {})
+            const sortedImplicit = Object.entries(data.implicit_interests || {})
                 .sort(([, aWeight], [, bWeight]) => bWeight - aWeight)
                 .map(([keyword, weight]) => ({ keyword, weight }));
 
@@ -189,7 +189,7 @@ export default function UserProfilePage() {
                                 }}
                             />
                             <span>{(weight ?? 0).toFixed(1)}</span>
-                            <button onClick={() => removeInterest(keyword)}>×</button>
+                            <button onClick={() => removeExplicitInterest(keyword)}>×</button>
                         </div>
                     ))}
                 </div>

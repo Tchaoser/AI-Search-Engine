@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import router
+from api.auth_routes import router as auth_router
+from api.search_routes import router as search_router
+from api.profile_routes import router as profile_router
 
 app = FastAPI()
 
@@ -19,7 +21,9 @@ app.add_middleware(
 )
 
 # Include API routes
-app.include_router(router)
+app.include_router(auth_router)
+app.include_router(search_router)
+app.include_router(profile_router)
 
 # Simple health check endpoint, can be removed
 @app.get("/health")

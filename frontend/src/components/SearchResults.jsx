@@ -1,14 +1,17 @@
 import React from "react";
 import { logClick } from "../api/search.js";
+import { getCurrentUserId } from "../auth/auth.js";
 
-export default function SearchResults({ results, query_id, user_id = "guest" }) {
+export default function SearchResults({ results, query_id, user_id }) {
+    const effectiveUser = user_id || getCurrentUserId();
+
     if (!results || results.length === 0) {
         return <p className="text-muted">No results yet. Try searching above.</p>;
     }
 
     const handleClick = (r, index) => {
         logClick({
-            user_id,
+            user_id: effectiveUser,
             query_id,
             clicked_url: r.link,
             rank: index + 1

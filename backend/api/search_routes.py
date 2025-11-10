@@ -2,6 +2,7 @@ from fastapi import APIRouter, Query, Body, Depends
 from services.search_service import search
 from services.logging_service import log_query, log_interaction
 from services import auth_service
+from services.semantic_expansion import expand_query 
 
 router = APIRouter()
 
@@ -11,8 +12,20 @@ from api.utils import get_user_id_from_auth
 # ---- Search endpoints ----
 @router.get("/search")
 async def search_endpoint(q: str = Query(...), user_id: str = Depends(get_user_id_from_auth)):
-    query_id = log_query(user_id=user_id, raw_text=q)
-    results = search(q)
+    # query_id = log_query(user_id=user_id, raw_text=q)
+    # results = search(q)
+    # return {"query_id": query_id, "results": results}
+    
+    
+    # Semantic expansion implementation
+    # Expand first (fails safe to original if Ollama is down)
+    enhanced = await expand_query(q)
+    # Use enhanced for search
+    results = search(enhanced)
+    # Log both (existing logger already supports enhanced_text)
+    query_id = log_query(user_id=user_id, raw_text=q, enhanced_text=enhanced)
+
+    # Keep response shape unchanged for the frontend cause thats all ya need
     return {"query_id": query_id, "results": results}
 
 @router.post("/interactions")

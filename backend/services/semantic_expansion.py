@@ -1,24 +1,22 @@
-import os, json
+# backend/services/semantic_expansion.py
+import os
 import httpx
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1")
 OLLAMA_TEMP = float(os.getenv("OLLAMA_TEMP", "0.4"))
-ENABLE_SEMANTIC_EXPANSION = os.getenv("ENABLE_SEMANTIC_EXPANSION", "1") in ("1", "true", "True")
+ENABLE_SEMANTIC_EXPANSION = os.getenv("ENABLE_SEMANTIC_EXPANSION", "1").strip().lower() in ("1","true","yes","on")
 
 SYSTEM_PROMPT = (
     "You expand short user queries into a single, more detailed search query. "
-    "Keep it one line, human-readable, and include helpful specifics like entities, "
-    "synonyms/aliases in parentheses, constraints (dates/regions/formats), and intent keywords. "
-    "Avoid extra commentary—return ONLY the expanded query."
+    "Keep it one line, human-readable, and include helpful specifics (entities, "
+    "synonyms/aliases in parentheses, dates/regions/formats, intent keywords). "
+    "Return ONLY the expanded query—no extra commentary."
 )
 
 async def expand_query(seed: str) -> str:
-    """
-    Returns a single-line, enhanced query.
-    If expansion is disabled or fails, returns the original seed.
-    """
-    if not ENABLE_SEMANTIC_EXPANSION:
+    seed = (seed or "").strip()
+    if not seed or not ENABLE_SEMANTIC_EXPANSION:
         return seed
 
     payload = {
@@ -35,8 +33,7 @@ async def expand_query(seed: str) -> str:
         r.raise_for_status()
         data = r.json()
         text = (data.get("response") or "").strip()
-        # collapse to one line
         return " ".join(text.split()) or seed
     except Exception:
-        # Fail-safe: search must remain functional
+        # fail-safe so search remains functional
         return seed

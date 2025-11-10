@@ -28,13 +28,17 @@ The backend uses **Python** with **FastAPI** for a simple, performant API and **
 
 ```
 backend/
-├─ main.py                         # Sets up FastAPI, CORS middleware, and includes API routes
+├─ main.py                         # Sets up FastAPI, CORS middleware, and includes API routers
 │
 ├─ api/
 │  ├─ __init__.py                  # Marks `api` as a Python package
-│  └─ routes.py                    # Defines HTTP endpoints (eg. /search, /profiles) and utilizes services
+│  ├─ auth_routes.py               # Handles /auth/register and /auth/login endpoints
+│  ├─ search_routes.py             # Handles /search endpoint and click logging
+│  ├─ profile_routes.py            # Handles /profiles endpoints (explicit/implicit interests)
+│  └─ utils.py                     # Helper functions, e.g., get_user_id_from_auth
 │
 ├─ models/
+│  ├─ __init__.py                  # Marks `models` as a Python package
 │  └─ data_models.py               # MongoDB document schemas (queries, interactions, user_profiles)
 │
 ├─ services/
@@ -42,14 +46,16 @@ backend/
 │  ├─ db.py                        # MongoDB connection and collection handles
 │  ├─ google_api.py                # Google Custom Search API calls
 │  ├─ search_service.py            # Search pipeline (proxies to Google and logs queries/interactions)
-│  └─ user_profile_service.py      # Aggregates queries/clicks and builds per-user interest profiles
+│  ├─ user_profile_service.py      # Aggregates queries/clicks and builds per-user interest profiles
+│  └─ auth_service.py              # Handles user creation, authentication, and JWT tokens
 │
 ├─ scripts/
+│  ├─ __init__.py                  # Marks `scripts` as a Python package
 │  └─ build_user_profiles.py       # Standalone script to rebuild profiles for all users from stored data
 │
-├─ .env                            # Environment variables (Google API key, CX, Mongo URI, etc.)
+├─ .env                            # Environment variables (Google API key, CX, Mongo URI, SECRET_KEY, etc.)
 ├─ requirements.txt                # Python dependencies
-└─ venv/                           # Virtual environment (not committed)
+└─ venv/                           # Virtual environment
 ```
 
 ---
@@ -60,29 +66,34 @@ backend/
 frontend/
 ├─ src/
 │  ├─ api/
-│  │  └─ search.js                   # Handles API calls to backend /search endpoint
+│  │  └─ search.js                  # Handles API calls to backend /search endpoint
+│  │
+│  ├─ auth/
+│  │  └─ auth.js                    # Helper functions for login, logout, current user, and auth headers
 │  │
 │  ├─ components/
-│  │  ├─ SearchBar.jsx               # User input component for entering search queries
-│  │  ├─ SearchResults.jsx           # Displays formatted list of search results
-│  │  └─ Navbar.jsx                  # Navigation bar with links to Search, Profile, and Settings pages
+│  │  ├─ SearchBar.jsx              # User input component for entering search queries
+│  │  ├─ SearchResults.jsx          # Displays formatted list of search results
+│  │  └─ Navbar.jsx                 # Navigation bar with links to Search, Profile, and Settings pages
 │  │
 │  ├─ notifications/
-│  │  ├─ NotificationProvider.jsx    # React Context provider & hook for notifications
-│  │  └─ notifications.css           # Styles for notifications
+│  │  ├─ NotificationProvider.jsx   # React Context provider & hook for notifications
+│  │  └─ notifications.css          # Styles for notifications
 │  │
 │  ├─ pages/
-│  │  ├─ SearchPage.jsx              # Main search page with query logic and result display
-│  │  ├─ UserProfilePage.jsx         # Page for user interests and search history view/edit
-│  │  └─ SettingsPage.jsx            # Placeholder page for privacy and personalization settings
+│  │  ├─ SearchPage.jsx             # Main search page with query logic and result display
+│  │  ├─ UserProfilePage.jsx        # Page for user interests and search history view/edit
+│  │  ├─ SettingsPage.jsx           # Placeholder page for privacy and personalization settings
+│  │  ├─ LoginPage.jsx              # Login form with username/password and redirects after login
+│  │  └─ RegisterPage.jsx           # Registration form for new users
 │  │
 │  ├─ App.jsx                        # Defines routes and overall layout
 │  ├─ index.css                      # Global styles                 
 │  └─ main.jsx                       # React entry point, mounts <App /> into DOM
 ├─ index.html                        # Root HTML shell for Vite (loads /src/main.jsx)
 ├─ package.json                      # Project metadata, dependencies, and scripts
-├─ vite.config.js                    # Vite build and dev server configuration
-└─ .env                              # Frontend environment variables (e.g., VITE_API_URL)
+├─ vite.config.js                     # Vite build and dev server configuration
+└─ .env                               # Frontend environment variables (e.g., VITE_API_URL)
 ```
 
 ---

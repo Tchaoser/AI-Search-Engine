@@ -1,23 +1,25 @@
 // src/pages/UserProfilePage.jsx
 import React, { useState, useEffect } from "react";
 import { useNotifications } from "../notifications/NotificationProvider.jsx";
+import { getCurrentUserId } from "../auth/auth.js";
 
 const API_URL = "http://localhost:5000";
-const USER_ID = "guest"; // hardcoded for now
 const IMPLICIT_SHOW_N = 10;
 
 export default function UserProfilePage() {
     const { notify } = useNotifications();
 
-    const [explicitInterests, setExplicitInterests] = useState([]); // explicit interests (list of {keyword,weight})
-    const [implicitInterests, setImplicitInterests] = useState([]); // list of {keyword,weight}
+    // Track current user dynamically
+    const [userId] = useState(getCurrentUserId()); // fallback to "guest" is already handled inside getCurrentUserId
+    const [explicitInterests, setExplicitInterests] = useState([]);
+    const [implicitInterests, setImplicitInterests] = useState([]);
     const [newInterest, setNewInterest] = useState("");
     const [loadingSave, setLoadingSave] = useState(false);
     const [loadingImplicitRemove, setLoadingImplicitRemove] = useState(false);
 
     // fetch profile and populate both explicit and implicit sets
     const loadProfile = () => {
-        fetch(`${API_URL}/profiles/${USER_ID}`)
+        fetch(`${API_URL}/profiles/${userId}`)
             .then(res => {
                 if (!res.ok) throw new Error("Failed to load profile");
                 return res.json();
@@ -41,7 +43,7 @@ export default function UserProfilePage() {
 
     useEffect(() => {
         loadProfile();
-    }, []); // notify removed from deps to avoid double fetch; keep effect simple
+    }, [loadProfile, userId]); // reload whenever user changes
 
     const addInterest = () => {
         const trimmed = newInterest.trim();
@@ -50,7 +52,7 @@ export default function UserProfilePage() {
         fetch(`${API_URL}/profiles/explicit/add`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: USER_ID, keyword: trimmed, weight: 1.0 })
+            body: JSON.stringify({ user_id: userId, keyword: trimmed, weight: 1.0 })
         })
             .then(async res => {
                 const data = await res.json();
@@ -70,7 +72,7 @@ export default function UserProfilePage() {
         fetch(`${API_URL}/profiles/explicit/remove`, {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: USER_ID, keyword })
+            body: JSON.stringify({ user_id: userId, keyword })
         })
             .then(async res => {
                 const data = await res.json();
@@ -92,7 +94,7 @@ export default function UserProfilePage() {
             const res = await fetch(`${API_URL}/profiles/implicit/remove`, {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ user_id: USER_ID, keyword })
+                body: JSON.stringify({ user_id: userId, keyword })
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || "Remove failed");
@@ -118,7 +120,7 @@ export default function UserProfilePage() {
             const res = await fetch(`${API_URL}/profiles/explicit/bulk_update`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ user_id: USER_ID, updates: explicitInterests })
+                body: JSON.stringify({ user_id: userId, updates: explicitInterests })
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || "Save failed");
@@ -139,6 +141,7 @@ export default function UserProfilePage() {
         <div>
             <div className="flex items-center justify-between mb-3">
                 <h2 className="text-2xl font-semibold">User Profile</h2>
+                <span className="text-gray-600 italic">Current User: {userId}</span>
                 <button
                     onClick={() => saveWeights({ showToast: true })}
                     className="btn btn-secondary"

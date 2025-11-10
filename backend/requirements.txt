@@ -1,5 +1,8 @@
 fastapi
 uvicorn
-pymongo[srv]
+pymongo
 python-dotenv
+python-jose[cryptography]
 requests
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1

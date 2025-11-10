@@ -7,6 +7,8 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1")
 OLLAMA_TEMP = float(os.getenv("OLLAMA_TEMP", "0.4"))
 ENABLE_SEMANTIC_EXPANSION = os.getenv("ENABLE_SEMANTIC_EXPANSION", "1").strip().lower() in ("1","true","yes","on")
 
+
+#modify this for better results
 SYSTEM_PROMPT = (
     "You expand short user queries into a single, more detailed search query. "
     "Keep it one line, human-readable, and include helpful specifics (entities, "
@@ -35,5 +37,5 @@ async def expand_query(seed: str) -> str:
         text = (data.get("response") or "").strip()
         return " ".join(text.split()) or seed
     except Exception:
-        # fail-safe so search remains functional
+        # fail-safe so search remains functional need this because of shitty gpu
         return seed

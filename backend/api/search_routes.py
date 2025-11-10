@@ -18,11 +18,11 @@ async def search_endpoint(q: str = Query(...), user_id: str = Depends(get_user_i
     
     
     # Semantic expansion implementation
-    # Expand first (fails safe to original if Ollama is down)
+    # Expand first (fails safe to original if Ollama is down = so you can test without ollama running)
     enhanced = await expand_query(q)
     # Use enhanced for search
     results = search(enhanced)
-    # Log both (existing logger already supports enhanced_text)
+    # Log both (existing logger already supports enhanced_text = nice job less work for me)
     query_id = log_query(user_id=user_id, raw_text=q, enhanced_text=enhanced)
 
     # Keep response shape unchanged for the frontend cause thats all ya need

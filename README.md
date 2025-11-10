@@ -297,12 +297,6 @@ OLLAMA_TEMP=0.4
 # controlling this feature: 1 = on, 0 = off
 ENABLE_SEMANTIC_EXPANSION=1
 
-# --- Mongo (adjust as needed) ---
-MONGODB_URI=mongodb://localhost:27017
-MONGODB_DB_NAME=ai_search_dev
-# MONGODB_QUERIES_COLLECTION=queries
-```
-
 
 #### What `OLLAMA_TEMP` Does
 

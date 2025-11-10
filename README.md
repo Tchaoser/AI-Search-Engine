@@ -235,6 +235,7 @@ curl "http://localhost:5000/search?q=test"
 ```
 
 You should see a search bar and subsequent results.
+
 **Note:** If when running your backend you get SSL handshake errors that means you IP address has been rejected by mongoDB. 
             - To fix go into mongoDB and signin, on the databse go to Database & Network option, then the IP access option.
             - Then add your IP to the IP access list, then try redoing your steps above

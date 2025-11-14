@@ -254,3 +254,122 @@ You should see a search bar and subsequent results.
    If results display after entering a search query, the integration test passes.
 
 This confirms the frontend and backend communicate correctly, and the project is ready for further development.
+
+
+## 5. Semantic Expansion with Ollama (Local LLM)
+
+This project can enhance queries semantically using a local LLM via **Ollama**. The backend calls Ollama to turn the short user query into a single, more detailed query. This improves recall and relevance without changing the API response shape.
+
+
+### A) Install and run Ollama
+
+**Windows**
+Install the official Ollama for Windows, then in Command Prompt (or PowerShell):
+ollama serve
+
+**macOS**
+brew install --cask ollama
+ollama serve
+
+**Linux**
+curl -fsSL https://ollama.com/install.sh | sh
+ollama serve
+
+Ollama listens on http://127.0.0.1:11434 by default.
+
+---
+
+### B) Pull a model
+
+Pull the model referenced in the backend:
+ollama pull llama3.1 #if you have enough vram, 4gb, use this. The bigger the model the better the results.
+
+Low-VRAM option:
+ollama pull llama3.2:3b
+
+---
+
+### C) Backend configuration (.env)
+
+update backend/.env to include this:
+```
+# --- semantic expansion ---
+OLLAMA_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.1
+OLLAMA_TEMP=0.4
+
+# controlling this feature: 1 = on, 0 = off
+ENABLE_SEMANTIC_EXPANSION=1
+
+
+#### What `OLLAMA_TEMP` Does
+
+`OLLAMA_TEMP` controls the **creativity** or **determinism** of the model’s responses:
+
+| Value   |                   Behavior                         |                     Use Case                         |
+|---------|----------------------------------------------------|------------------------------------------------------|
+| 0.0–0.2 | Very deterministic (nearly identical outputs).     | When you need consistent query expansion results.    |
+| 0.3–0.6 | Balanced (some variability, but still relevant).   | Ideal for semantic query expansion — your case.      |
+| 0.7–1.0 | More creative and exploratory responses.           | When you want diverse, alternate phrasings or ideas. |
+
+In this project:
+```
+OLLAMA_TEMP=0.4
+```
+means the model will slightly vary its expansions but remain semantically grounded.
+
+### F) Test the LLM path
+
+Smoke test Ollama:
+```
+curl http://127.0.0.1:11434/api/tags
+```
+
+Generate once:
+```
+curl -s http://127.0.0.1:11434/api/generate -H "Content-Type: application/json" -d '{"model":"llama3.1","prompt":"say hi","stream":false}'
+```
+
+End-to-end test:
+```
+curl -s "http://localhost:5000/search?q=solar%20panel%20tax%20incentives"
+```
+
+You should get { "query_id": "...", "results": [...] }. The backend searched with the **enhanced** query and logged both raw_text and enhanced_text in Mongo.
+
+---
+
+### G) Troubleshooting (Windows/NVIDIA)
+
+Port already in use when running ollama serve
+Another Ollama instance is likely running. Test:
+```
+curl http://127.0.0.1:11434/api/tags
+```
+
+Or kill the process:
+```
+netstat -ano | findstr :11434
+taskkill /PID <PID> /F
+```
+
+CUDA error when starting a large model
+Try CPU or a smaller model:
+```
+set OLLAMA_NO_GPU=1
+ollama serve
+```
+
+Or:
+```
+ollama pull llama3.2:3b
+ollama run llama3.2:3b
+```
+
+Change port
+```
+set OLLAMA_HOST=127.0.0.1:11435
+ollama serve
+```
+
+Update OLLAMA_URL in backend/.env accordingly.

@@ -1,6 +1,7 @@
 from fastapi import Header
 from services import auth_service
 
+
 async def get_user_id_from_auth(authorization: str = Header(None)):
     if not authorization:
         return "guest"

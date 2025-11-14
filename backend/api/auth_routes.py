@@ -3,6 +3,7 @@ from services import auth_service
 
 router = APIRouter()
 
+
 @router.post("/auth/register")
 async def register(body: dict = Body(...)):
     """
@@ -18,6 +19,7 @@ async def register(body: dict = Body(...)):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"user_id": user["user_id"], "username": user["username"]}
+
 
 @router.post("/auth/login")
 async def login(form_data: dict = Body(...)):

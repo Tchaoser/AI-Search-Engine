@@ -11,7 +11,7 @@ from api.utils import get_user_id_from_auth
 
 # ---- Search endpoints ----
 @router.get("/search")
-async def search_endpoint(q: str = Query(...), user_id: str = Depends(get_user_id_from_auth)):
+async def search_endpoint(q: str = Query(...), use_enhanced: bool = Query(True), user_id: str = Depends(get_user_id_from_auth)):
     # query_id = log_query(user_id=user_id, raw_text=q)
     # results = search(q)
     # return {"query_id": query_id, "results": results}
@@ -19,14 +19,19 @@ async def search_endpoint(q: str = Query(...), user_id: str = Depends(get_user_i
     
     # Semantic expansion implementation
     # Expand first (fails safe to original if Ollama is down = so you can test without ollama running)
-    enhanced = await expand_query(q)
+    # Only expand if use_enhanced is True
+    if use_enhanced:
+        enhanced = await expand_query(q)
+    else:
+        enhanced = q
+
     # Use enhanced for search
     results = search(enhanced)
     # Log both (existing logger already supports enhanced_text = nice job less work for me)
     query_id = log_query(user_id=user_id, raw_text=q, enhanced_text=enhanced)
 
     # Keep response shape unchanged for the frontend cause thats all ya need
-    return {"query_id": query_id, "results": results}
+    return {"query_id": query_id, "results": results, "original_query": q, "enhanced_query": enhanced, "use_enhanced": use_enhanced}
 
 @router.post("/interactions")
 async def log_click(user_id: str = Body(None), query_id: str = Body(...),

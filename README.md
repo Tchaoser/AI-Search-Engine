@@ -299,6 +299,7 @@ OLLAMA_MODEL=llama3.1
 OLLAMA_TEMP=0.4
 
 # controlling this feature: 1 = on, 0 = off
+we no longer need to have this in the .env file as we now have a setting in the settings page that can turn it on and off
 ENABLE_SEMANTIC_EXPANSION=1
 
 

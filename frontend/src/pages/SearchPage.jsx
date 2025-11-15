@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { searchQuery } from "../api/search.js";
 import SearchBar from "../components/SearchBar.jsx";
 import SearchResults from "../components/SearchResults.jsx";
@@ -8,13 +8,22 @@ export default function SearchPage() {
     const [queryId, setQueryId] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [useEnhanced, setUseEnhanced] = useState(true);
+
+    // Load the useEnhancedQuery setting from localStorage on mount
+    useEffect(() => {
+        const saved = localStorage.getItem("useEnhancedQuery");
+        if (saved !== null) {
+            setUseEnhanced(JSON.parse(saved));
+        }
+    }, []);
 
     const handleSearch = async (query) => {
         setLoading(true);
         setError(null);
 
         try {
-            const data = await searchQuery(query);
+            const data = await searchQuery(query, useEnhanced);
             setQueryId(data.query_id || null);
             setResults(Array.isArray(data.results) ? data.results : []);
         } catch (err) {

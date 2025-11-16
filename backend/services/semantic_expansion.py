@@ -5,7 +5,6 @@ import httpx
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1")
 OLLAMA_TEMP = float(os.getenv("OLLAMA_TEMP", "0.4"))
-ENABLE_SEMANTIC_EXPANSION = os.getenv("ENABLE_SEMANTIC_EXPANSION", "1").strip().lower() in ("1","true","yes","on")
 
 
 #modify this for better results
@@ -18,7 +17,7 @@ SYSTEM_PROMPT = (
 
 async def expand_query(seed: str) -> str:
     seed = (seed or "").strip()
-    if not seed or not ENABLE_SEMANTIC_EXPANSION:
+    if not seed:
         return seed
 
     payload = {

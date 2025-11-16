@@ -207,7 +207,6 @@ Add the following to `backend/.env`:
 OLLAMA_URL=http://localhost:11434
 OLLAMA_MODEL=llama3.1
 OLLAMA_TEMP=0.4
-ENABLE_SEMANTIC_EXPANSION=1
 ```
 
 `OLLAMA_TEMP` affects determinism:
@@ -257,6 +256,14 @@ Open the printed local URL (typically `http://localhost:5173/`) in a browser. En
 ---
 
 ## Testing and Diagnostics
+
+update backend/.env to include this:
+```
+# --- semantic expansion ---
+OLLAMA_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.1
+OLLAMA_TEMP=0.4
+```
 
 Check that Ollama is responding:
 

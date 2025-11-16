@@ -3,8 +3,8 @@ import { getAuthHeaders } from "../auth/auth.js";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-export async function searchQuery(query) {
-    const url = `${API_BASE}/search?q=${encodeURIComponent(query)}`;
+export async function searchQuery(query, useEnhanced = true) {
+    const url = `${API_BASE}/search?q=${encodeURIComponent(query)}&use_enhanced=${useEnhanced}`;
     const headers = getAuthHeaders();
     const res = await axios.get(url, { headers });
     return res.data;

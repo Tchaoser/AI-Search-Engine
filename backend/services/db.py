@@ -15,3 +15,5 @@ queries_col = db["queries"]
 interactions_col = db["interactions"]
 user_profiles_col = db["user_profiles"]
 users_col = db["users"]
+# Collection to track tokens that were discarded during preprocessing
+discarded_tokens_col = db["discarded_tokens"]

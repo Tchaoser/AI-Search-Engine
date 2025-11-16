@@ -1,5 +1,5 @@
 // src/pages/UserProfilePage.jsx
-import React, { useState, useEffect } from "react";
+import React, {useState, useEffect, useCallback} from "react";
 import { useNotifications } from "../notifications/NotificationProvider.jsx";
 import { getCurrentUserId } from "../auth/auth.js";
 
@@ -18,20 +18,15 @@ export default function UserProfilePage() {
     const [loadingImplicitRemove, setLoadingImplicitRemove] = useState(false);
 
     // fetch profile and populate both explicit and implicit sets
-    const loadProfile = () => {
+    const loadProfile = useCallback(() => {
         fetch(`${API_URL}/profiles/${userId}`)
-            .then(res => {
-                if (!res.ok) throw new Error("Failed to load profile");
-                return res.json();
-            })
+            .then(res => res.ok ? res.json() : Promise.reject("Failed to load profile"))
             .then(profile => {
                 setExplicitInterests(profile.explicit_interests || []);
-
                 // Build sorted implicit array (descending by weight)
                 const sortedImplicit = Object.entries(profile.implicit_interests || {})
                     .sort(([, aWeight], [, bWeight]) => bWeight - aWeight)
                     .map(([keyword, weight]) => ({ keyword, weight }));
-
                 setImplicitInterests(sortedImplicit.slice(0, IMPLICIT_SHOW_N));
             })
             .catch(err => {
@@ -39,7 +34,7 @@ export default function UserProfilePage() {
                 setImplicitInterests([]);
                 notify({ type: "error", title: "Load failed", message: err.message || "Could not load profile" });
             });
-    };
+    }, [userId, notify]);
 
     useEffect(() => {
         loadProfile();

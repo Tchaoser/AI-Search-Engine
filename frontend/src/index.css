@@ -212,3 +212,10 @@ body {
     background-color: rgba(0,0,0,0.15); /* darker imprint on hover */
     color: #1e293b; /* stronger contrast */
 }
+
+/* Active nav link styling */
+.nav-link.active {
+    background-color: #1e40af; /* blue background for active */
+    color: white;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.12) inset;
+}

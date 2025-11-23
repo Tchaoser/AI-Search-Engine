@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { NavLink, Link, useNavigate } from "react-router-dom";
 import { clearCurrentUser, getCurrentUserId } from "../auth/auth.js";
 
 export default function Navbar() {
@@ -20,19 +20,19 @@ export default function Navbar() {
                 </div>
 
                 <nav className="flex gap-4 items-center">
-                    <Link to="/" className="nav-link">Search</Link>
-                    <Link to="/profile" className="nav-link">Profile</Link>
-                    <Link to="/settings" className="nav-link">Settings</Link>
+                    <NavLink to="/" end className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Search</NavLink>
+                    <NavLink to="/profile" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Profile</NavLink>
+                    <NavLink to="/settings" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Settings</NavLink>
 
                     {userId !== "guest" ? (
                         <button onClick={handleLogout} className="btn btn-link text-sm ml-auto">
                             Logout ({userId})
                         </button>
                     ) : (
-                        <>
-                            <Link to="/login" className="nav-link ml-auto">Login</Link>
-                            <Link to="/register" className="nav-link">Register</Link>
-                        </>
+                        <div className="ml-auto flex gap-2">
+                            <NavLink to="/login" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Login</NavLink>
+                            <NavLink to="/register" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Register</NavLink>
+                        </div>
                     )}
                 </nav>
             </div>

@@ -48,7 +48,7 @@ class QueryCache:
 
     def set(self, query: str, model: str, temp: float, expanded: str) -> None:
         if not self.ttl:
-            return  # caching disabled
+            return  #caching disabled
         key = self._make_key(query, model, temp)
         self._store[key] = (expanded, time.time())
 

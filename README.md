@@ -165,6 +165,10 @@ In the .env file for backend this value is an optional control to modify the lif
 
 QUERY_CACHE_TTL = 3600
 
+set QUERY_CACHE_TTL = 0 to disable cache
+
+
+
 ### Ollama Installation and Model Setup
 
 Install Ollama based on your operating system:

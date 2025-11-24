@@ -1,6 +1,7 @@
 # backend/services/semantic_expansion.py
 import os
 import httpx
+from services.query_cache import query_cache #singleton cache imported
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1")
@@ -19,6 +20,15 @@ async def expand_query(seed: str) -> str:
     seed = (seed or "").strip()
     if not seed:
         return seed
+    
+    in_cache = query_cache.get(seed, OLLAMA_MODEL, OLLAMA_TEMP)
+    if in_cache:
+        # Cached expanded query returned
+        print("Query is in cache")
+        return in_cache
+    else:
+        print("Query not in cache")
+    
 
     payload = {
         "model": OLLAMA_MODEL,
@@ -34,7 +44,16 @@ async def expand_query(seed: str) -> str:
         r.raise_for_status()
         data = r.json()
         text = (data.get("response") or "").strip()
-        return " ".join(text.split()) or seed
+        expanded = " ".join(text.split()) or seed
+        #return " ".join(text.split()) or seed
     except Exception:
         # fail-safe so search remains functional need this because of shitty gpu
-        return seed
+        expanded = seed
+        #return seed
+    
+    #expanded query stored even if idential to seed
+    query_cache.set(seed, OLLAMA_MODEL, OLLAMA_TEMP, expanded)
+
+    return expanded
+    
+

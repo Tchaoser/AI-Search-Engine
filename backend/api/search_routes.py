@@ -24,15 +24,16 @@ async def search_endpoint(
     else:
         enhanced = q
 
-    # Perform search using whichever query is active
-    results = search(enhanced)
-
-    # Log both original + enhanced (even if identical when disabled)
+    # Log the query before search so the user's profile reflects the most recent
+    # session activity and can influence personalized reranking.
     query_id = log_query(
         user_id=user_id,
         raw_text=q,
         enhanced_text=enhanced
     )
+
+    # Perform search using whichever query is active, pass user_id for personalization
+    results = search(enhanced, user_id=user_id)
 
     return {
         "query_id": query_id,

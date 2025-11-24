@@ -6,6 +6,7 @@ import SearchResults from "../components/SearchResults.jsx";
 export default function SearchPage() {
     const [results, setResults] = useState([]);
     const [queryId, setQueryId] = useState(null);
+    const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [useEnhanced, setUseEnhanced] = useState(true);
@@ -19,6 +20,7 @@ export default function SearchPage() {
     }, []);
 
     const handleSearch = async (query) => {
+        setSearchTerm(query);
         setLoading(true);
         setError(null);
 
@@ -47,7 +49,7 @@ export default function SearchPage() {
             {error && <p className="text-red mt-2">{error}</p>}
 
             <div className="mt-1">
-                <SearchResults results={results} query_id={queryId} />
+                <SearchResults results={results} query_id={queryId} searchTerm={searchTerm} loading={loading} />
             </div>
         </div>
     );

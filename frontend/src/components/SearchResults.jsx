@@ -2,11 +2,21 @@ import React from "react";
 import { logClick } from "../api/search.js";
 import { getCurrentUserId } from "../auth/auth.js";
 
-export default function SearchResults({ results, query_id, user_id }) {
+export default function SearchResults({ results, query_id, user_id, searchTerm, loading }) {
     const effectiveUser = user_id || getCurrentUserId();
 
-    if (!results || results.length === 0) {
+    // Only show no-results message when loading is finished and there are no results
+    if (!loading && (!results || results.length === 0)) {
+        const term = (searchTerm || "").trim();
+        if (term) {
+            return <p className="text-muted">No results found for '{term}'. Try a different keyword or check your spelling.</p>;
+        }
         return <p className="text-muted">No results yet. Try searching above.</p>;
+    }
+
+    // Don't show anything while loading or if there are results
+    if (!results || results.length === 0) {
+        return null;
     }
 
     const handleClick = (r, index) => {

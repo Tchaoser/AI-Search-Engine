@@ -45,11 +45,9 @@ async def expand_query(seed: str) -> str:
         data = r.json()
         text = (data.get("response") or "").strip()
         expanded = " ".join(text.split()) or seed
-        #return " ".join(text.split()) or seed
     except Exception:
         # fail-safe so search remains functional need this because of shitty gpu
         expanded = seed
-        #return seed
     
     #expanded query stored even if idential to seed
     query_cache.set(seed, OLLAMA_MODEL, OLLAMA_TEMP, expanded)

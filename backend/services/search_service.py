@@ -1,5 +1,6 @@
 from services.google_api import search_google
-from services.user_profile_service import build_user_profile, preprocess, normalize_url
+from services.user_profile_service import preprocess, normalize_url
+from services.db import user_profiles_col
 
 
 def _score_result(result: dict, profile: dict):
@@ -35,8 +36,9 @@ def _score_result(result: dict, profile: dict):
 
 def search(query: str, user_id: str = None):
     """
-    Search pipeline: proxies to Google Custom Search, then applies a lightweight
-    personalization reranking using the user's profile if available.
+    Search pipeline: proxies to Google Custom Search, then applies personalization/reranking
+    using the user's cached profile if available.
+    
     Returns a list of results ordered by personalized score.
     """
     results = search_google(query)
@@ -45,11 +47,28 @@ def search(query: str, user_id: str = None):
     if not user_id:
         return results
 
-    # Ensure profile exists and is (re)computed
+    # Fetch cached profile from DB (no rebuild to reduce overhead)
     try:
-        profile = build_user_profile(user_id)
+        profile = user_profiles_col.find_one({"user_id": user_id})
     except Exception:
         profile = None
+
+    if not profile:
+        return results
+
+    # Assign base rank score (higher for earlier results)
+    scored = []
+    for idx, r in enumerate(results):
+        # base positional score: inverse of rank (1-based)
+        pos_score = max(0.0, (len(results) - idx)) / max(1.0, len(results))
+        personal_score = _score_result(r, profile)
+        total = pos_score + personal_score
+        scored.append((total, r))
+
+    # sort by total descending
+    scored.sort(key=lambda x: -x[0])
+    return [r for (_s, r) in scored]
+
 
     # Assign base rank score (higher for earlier results)
     scored = []

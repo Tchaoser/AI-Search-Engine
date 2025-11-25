@@ -1,9 +1,15 @@
+import os
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 import re
 import math
 from urllib.parse import urlparse
 from services.db import queries_col, interactions_col, user_profiles_col, discarded_tokens_col
+
+# Session decay: interactions within this window get a boost multiplier
+# Default: 480 minutes = 8 hours
+SESSION_DECAY_MINUTES = int(os.getenv("SESSION_DECAY_MINUTES", 480))
+SESSION_BOOST_MULTIPLIER = float(os.getenv("SESSION_BOOST_MULTIPLIER", 1.5))
 
 # Expanded stopword list (common English stopwords + some domain-specific tokens)
 STOP_WORDS = {
@@ -84,15 +90,20 @@ def _parse_iso(ts: str) -> datetime:
 def aggregate_queries(user_id: str,
                       session_window_minutes: int = 30,
                       recency_decay_days: float = 30.0,
+                      session_decay_minutes: int = None,
                       discarded_counter: Counter = None):
     """
     Aggregate and score tokens from user's past queries.
 
     - Groups queries into sessions using session_window_minutes.
     - Applies recency decay (exponential) based on recency_decay_days.
-    - Applies a session boost when tokens appear multiple times in the same session.
+    - Applies a session boost when tokens appear in the current session (within session_decay_minutes).
+    - Applies a session boost when tokens are repeated within a session.
     Returns a dict[token] -> score and list of unique tokens (for history).
     """
+    if session_decay_minutes is None:
+        session_decay_minutes = SESSION_DECAY_MINUTES
+    
     docs = list(queries_col.find({"user_id": user_id}))
     if not docs:
         return {}, []
@@ -122,6 +133,7 @@ def aggregate_queries(user_id: str,
     token_scores = defaultdict(float)
     token_seen = set()
     now = datetime.utcnow()
+    session_cutoff = now - timedelta(minutes=session_decay_minutes)
 
     for session in sessions:
         # collect per-session counts
@@ -138,24 +150,35 @@ def aggregate_queries(user_id: str,
 
         # recency multiplier (exponential decay)
         recency_mult = math.exp(- (session_age_days / max(1.0, recency_decay_days)))
+        
+        # check if session is within SESSION_DECAY_MINUTES (current session window)
+        session_ts = session[-1][1]  # use last query in session as reference
+        in_current_session = session_ts >= session_cutoff
+        session_mult = SESSION_BOOST_MULTIPLIER if in_current_session else 1.0
 
         # apply per-token scoring within the session
         for token, cnt in session_counter.items():
             # session boost if repeated within session
             s_boost = 1.0 + (0.5 * (cnt - 1)) if cnt > 1 else 1.0
-            token_scores[token] += cnt * s_boost * recency_mult
+            token_scores[token] += cnt * s_boost * recency_mult * session_mult
             token_seen.add(token)
 
     return dict(token_scores), list(token_seen)
 
 
-def aggregate_clicks(user_id: str, recency_decay_days: float = 30.0):
+def aggregate_clicks(user_id: str, recency_decay_days: float = 30.0, session_decay_minutes: int = None):
+    """Aggregate and score clicked domains with recency and session weighting."""
+    if session_decay_minutes is None:
+        session_decay_minutes = SESSION_DECAY_MINUTES
+    
     docs = list(interactions_col.find({"user_id": user_id}))
     domain_counts = defaultdict(float)
     if not docs:
         return {}
 
     now = datetime.utcnow()
+    session_cutoff = now - timedelta(minutes=session_decay_minutes)
+    
     for doc in docs:
         domain = normalize_url(doc.get("clicked_url", ""))
         rank = doc.get("rank", 1) or 1
@@ -165,8 +188,11 @@ def aggregate_clicks(user_id: str, recency_decay_days: float = 30.0):
 
         # Apply a soft rank weight: higher rank (1) => higher weight
         rank_weight = max(0.1, (11 - float(rank)) / 10.0)  # rank 1 -> 1.0, rank 10 -> 0.1
+        
+        # Apply session boost for recent clicks within SESSION_DECAY_MINUTES
+        session_mult = SESSION_BOOST_MULTIPLIER if ts >= session_cutoff else 1.0
 
-        domain_counts[domain] += rank_weight * recency_mult
+        domain_counts[domain] += rank_weight * recency_mult * session_mult
 
     return dict(domain_counts)
 
@@ -176,22 +202,29 @@ def build_user_profile(user_id: str,
                        click_weight: float = 2.0,
                        session_window_minutes: int = 30,
                        session_boost: float = 1.5,
-                       recency_decay_days: float = 30.0):
+                       recency_decay_days: float = 30.0,
+                       session_decay_minutes: int = None):
     """
     Build or update the user profile with improved preprocessing and weighting.
+    
+    Session-aware weighting: interactions within session_decay_minutes receive a boost multiplier.
 
     Returns the profile document saved in MongoDB.
     """
+    if session_decay_minutes is None:
+        session_decay_minutes = SESSION_DECAY_MINUTES
+    
     discarded_counter = Counter()
 
     keywords_scores, query_history = aggregate_queries(
         user_id,
         session_window_minutes=session_window_minutes,
         recency_decay_days=recency_decay_days,
+        session_decay_minutes=session_decay_minutes,
         discarded_counter=discarded_counter
     )
 
-    clicks_scores = aggregate_clicks(user_id, recency_decay_days=recency_decay_days)
+    clicks_scores = aggregate_clicks(user_id, recency_decay_days=recency_decay_days, session_decay_minutes=session_decay_minutes)
 
     # Merge with tunable weights
     interests = defaultdict(float)

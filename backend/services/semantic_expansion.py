@@ -1,29 +1,33 @@
 # backend/services/semantic_expansion.py
 import os
+import sys
 import httpx
 import logging
-from services.db import user_profiles_col
 
-import sys
+from services.query_cache import query_cache  # singleton cache
+from services.db import user_profiles_col    
 
-# Configure logger for this module
+# ---------------------------------------------------
+# Logging Setup
+# ---------------------------------------------------
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-# Create handler if none exists
 if not logger.handlers:
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.INFO)
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    logger.propagate = False
 
-# Set up logger
-logger = logging.getLogger(__name__)
+logger.propagate = False
 
+
+# ---------------------------------------------------
+# Config
+# ---------------------------------------------------
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1")
 OLLAMA_TEMP = float(os.getenv("OLLAMA_TEMP", "0.4"))
@@ -74,6 +78,15 @@ async def expand_query(seed: str, user_id: str = None) -> str:
     if not seed:
         logger.warning("Empty seed query provided")
         return seed
+    
+    in_cache = query_cache.get(seed, OLLAMA_MODEL, OLLAMA_TEMP)
+    if in_cache:
+        # Cached expanded query returned
+        print("Query is in cache")
+        return in_cache
+    else:
+        print("Query not in cache")
+    
 
     logger.info(f"Expanding query: '{seed}' for user_id: {user_id}")
 
@@ -107,19 +120,14 @@ async def expand_query(seed: str, user_id: str = None) -> str:
             r = await client.post(f"{OLLAMA_URL.rstrip('/')}/api/generate", json=payload)
 
         r.raise_for_status()
-        response_data = r.json()
-        text = (response_data.get("response") or "").strip()
-        expanded_query = " ".join(text.split()) or seed
+        data = r.json()
+        text = (data.get("response") or "").strip()
+        expanded = " ".join(text.split()) or seed
+    except Exception:
+        # fail-safe so search remains functional need this because of shitty gpu
+        expanded = seed
 
-        # Log the enhancement result
-        if expanded_query != seed:
-            logger.info(f"Query enhanced: '{seed}' -> '{expanded_query}'")
-        else:
-            logger.info(f"Query unchanged: '{seed}'")
+    #expanded query stored even if idential to seed
+    query_cache.set(seed, OLLAMA_MODEL, OLLAMA_TEMP, expanded)
 
-        return expanded_query
-
-    except Exception as e:
-        # Log the error and fallback
-        logger.error(f"Error expanding query '{seed}': {str(e)}. Falling back to original query.")
-        return seed
+    return expanded

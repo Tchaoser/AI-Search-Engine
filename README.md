@@ -159,6 +159,15 @@ Install backend dependencies:
 ```bash
 pip install -r requirements.txt
 ```
+### Cache control setup
+
+In the .env file for backend this value is an optional control to modify the lifespan of stored queries; its in seconds
+
+QUERY_CACHE_TTL = 3600
+
+set QUERY_CACHE_TTL = 0 to disable cache
+
+
 
 ### Ollama Installation and Model Setup
 

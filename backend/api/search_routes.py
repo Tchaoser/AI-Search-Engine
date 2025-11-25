@@ -20,7 +20,7 @@ async def search_endpoint(
     """
 
     if use_enhanced:
-        enhanced = await expand_query(q, user_id=user_id)   # safe fallback is implemented inside expand_query
+        enhanced = await expand_query(q)   # safe fallback is implemented inside expand_query
     else:
         enhanced = q
 

@@ -9,6 +9,17 @@ from typing import Dict, List, Tuple
 from services.query_cache import query_cache  # singleton cache
 from services.db import user_profiles_col    
 
+
+#fine-tune to get proper weighing
+EXPLICIT_BASE_WEIGHT = 3.0       # how strong explicit interests are
+IMPLICIT_BASE_WEIGHT = 1.0       # baseline for implicit interests
+IMPLICIT_SCALE = 0.5             # scales raw implicit score from DB
+HISTORY_BONUS = 0.3              # bonus per query-history match
+MAX_INTEREST_SCORE = 15.0        # cap to prevent giants like 40+
+MIN_INTEREST_SCORE = 0.5         # below this, ignore as noise
+
+
+
 # ---------------------------------------------------
 # Logging Setup
 # ---------------------------------------------------
@@ -119,46 +130,52 @@ def _get_implicit_interest_scores(profile: dict) -> Dict[str, float]:
 
     return {}
 
-
-# Interest scoring
+#Interest scoring based on fine tuned values above
 def _compute_interest_scores(profile: dict) -> Dict[str, float]:
-    """
-    Combine explicit + implicit interests into a unified scored dictionary.
-
-    Scoring heuristics:
-        - Explicit interests: +3.0 (strong manual signal)
-        - Implicit interests: +1.0 base + stored numeric weight
-        - Query history match: +0.5 for each time an interest appears
-          in a previous query (simple relevance reinforcement)
-    """
     scores: Dict[str, float] = {}
 
-    # Explicit interests get strong weight
+    # explicit
     for kw in _get_explicit_interest_keywords(profile):
         key = kw.lower()
-        scores[key] = scores.get(key, 0.0) + 3.0
+        scores[key] = scores.get(key, 0.0) + EXPLICIT_BASE_WEIGHT
 
-    # Implicit interests get smaller—but meaningful—weight
+    # implicit
     for kw, implicit_score in _get_implicit_interest_scores(profile).items():
         key = kw.lower()
-        scores[key] = scores.get(key, 0.0) + 1.0 + float(implicit_score)
+        scores[key] = scores.get(key, 0.0) + IMPLICIT_BASE_WEIGHT + IMPLICIT_SCALE * float(implicit_score)
 
-    # Light reinforcement from query history
+    # history
     history = profile.get("query_history", []) or []
     for entry in history:
         raw_text = entry.get("query") if isinstance(entry, dict) else str(entry)
         tokens = _simple_tokenize(raw_text)
-
         for kw in list(scores.keys()):
             if kw in tokens:
-                scores[kw] += 0.5
+                scores[kw] += HISTORY_BONUS
 
-    _log_truncated_dict(
-        "[scores] Combined explicit + implicit + history-based interest scores",
-        scores,
-        MAX_LOG_ITEMS
-    )
-    return scores
+    # moderate interest scores 
+    clipped: Dict[str, float] = {}
+    for kw, score in scores.items():
+        if score < MIN_INTEREST_SCORE:
+            continue
+        clipped[kw] = min(score, MAX_INTEREST_SCORE)
+
+    _log_truncated_dict("[scores] Combined explicit + implicit + history-based interest scores", clipped, MAX_LOG_ITEMS)
+    return clipped
+
+_compute_interest_scores.__doc__ = f"""
+Combine explicit + implicit interests into a unified scored dictionary.
+
+Current Scoring Heuristics (dynamic):
+    - Explicit interests: +{EXPLICIT_BASE_WEIGHT}
+    - Implicit interests: +{IMPLICIT_BASE_WEIGHT} base + {IMPLICIT_SCALE} * stored implicit score
+    - Query history match: +{HISTORY_BONUS} per match
+    - Score clipping: max = {MAX_INTEREST_SCORE}, min = {MIN_INTEREST_SCORE}
+
+These values are taken directly from the module-level constants so this
+documentation always stays accurate even if the weighting is tuned later.
+"""
+
 
 
 # Interest relevance selection for current query

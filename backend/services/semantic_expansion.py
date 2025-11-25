@@ -3,7 +3,9 @@ import os
 import sys
 import httpx
 import logging
+import re
 
+from typing import Dict, List, Tuple
 from services.query_cache import query_cache  # singleton cache
 from services.db import user_profiles_col    
 
@@ -40,71 +42,238 @@ SYSTEM_PROMPT_BASE = (
 )
 
 
-def _get_personalization_context(user_id: str, max_items: int = 5):
-    """
-    Fetch top implicit + explicit interests; return short string describing them.
-    """
-    if not user_id:
-        logger.debug(f"No user_id provided for personalization context")
-        return ""
+# ---------------------------------------------------
+# Simple tokenization
+# ---------------------------------------------------
 
-    profile = user_profiles_col.find_one({"user_id": user_id})
-    if not profile:
-        logger.debug(f"No profile found for user_id: {user_id}")
-        return ""
+# Use a basic regex to identify "words" (letters/numbers/underscore)
+_TOKEN_WORD_REGEX = re.compile(r"\w+")
 
-    implicit = profile.get("implicit_interests", {}) or {}
+
+def _simple_tokenize(text: str) -> List[str]:
+    """
+    Tokenize text into lowercase words for lightweight overlap checks.
+
+    This tokenizer intentionally avoids complexity (no NLP libraries).
+    It is sufficient to detect whether a query and a user interest
+    have meaningful word overlap.
+    """
+    if not text:
+        return []
+    return [token.lower() for token in _TOKEN_WORD_REGEX.findall(text)]
+
+
+# ---------------------------------------------------
+# Interest extraction helpers
+# ---------------------------------------------------
+
+def _get_explicit_interest_keywords(profile: dict) -> List[str]:
+    """
+    Extract explicit interests from the user profile.
+
+    Expected shape:
+        profile["explicit_interests"] = [{"keyword": "python"}, {...}, ...]
+    """
     explicit_raw = profile.get("explicit_interests", []) or []
-    explicit = [e["keyword"] for e in explicit_raw if "keyword" in e]
+    out: List[str] = []
 
-    # take top N implicit tokens
-    top_implicit = list(implicit.keys())[:max_items]
+    for item in explicit_raw:
+        if isinstance(item, dict):
+            keyword = item.get("keyword")
+            if keyword:
+                out.append(str(keyword))
 
-    interests = explicit + top_implicit
-    if not interests:
-        logger.debug(f"No interests found for user_id: {user_id}")
+    return out
+
+
+def _get_implicit_interest_scores(profile: dict) -> Dict[str, float]:
+    """
+    Extract implicit interests as {keyword: numeric_score}.
+
+    Supports both:
+        - dict form: {"ai": 2.4, "cloud": 1.2}
+        - list form: ["ai", "cloud"] → defaults to 1.0 each
+    """
+    raw = profile.get("implicit_interests", {}) or {}
+
+    # Dict form
+    if isinstance(raw, dict):
+        out: Dict[str, float] = {}
+        for key, value in raw.items():
+            if isinstance(value, (int, float)):
+                out[str(key)] = float(value)
+            else:
+                out[str(key)] = 1.0
+        return out
+
+    # List form
+    if isinstance(raw, list):
+        return {str(item): 1.0 for item in raw}
+
+    return {}
+
+
+# Interest scoring
+def _compute_interest_scores(profile: dict) -> Dict[str, float]:
+    """
+    Combine explicit + implicit interests into a unified scored dictionary.
+
+    Scoring heuristics:
+        - Explicit interests: +3.0 (strong manual signal)
+        - Implicit interests: +1.0 base + stored numeric weight
+        - Query history match: +0.5 for each time an interest appears
+          in a previous query (simple relevance reinforcement)
+    """
+    scores: Dict[str, float] = {}
+
+    # Explicit interests get strong weight
+    for kw in _get_explicit_interest_keywords(profile):
+        key = kw.lower()
+        scores[key] = scores.get(key, 0.0) + 3.0
+
+    # Implicit interests get smaller—but meaningful—weight
+    for kw, implicit_score in _get_implicit_interest_scores(profile).items():
+        key = kw.lower()
+        scores[key] = scores.get(key, 0.0) + 1.0 + float(implicit_score)
+
+    # Light reinforcement from query history
+    history = profile.get("query_history", []) or []
+    for entry in history:
+        raw_text = entry.get("query") if isinstance(entry, dict) else str(entry)
+        tokens = _simple_tokenize(raw_text)
+
+        for kw in list(scores.keys()):
+            if kw in tokens:
+                scores[kw] += 0.5
+
+    return scores
+
+
+# Interest relevance selection for current query
+def _select_interests_for_query(
+    seed_query: str,
+    scored_interests: Dict[str, float],
+    max_primary: int = 3,
+    max_secondary: int = 3,
+) -> Tuple[List[str], List[str]]:
+    """
+    Select which interests matter for this query.
+
+    Returns:
+        primary_interests   – Top-scoring interests with token overlap to query
+        secondary_interests – Next best interests (high score, but no overlap)
+    """
+    if not scored_interests:
+        return [], []
+
+    seed_tokens = set(_simple_tokenize(seed_query))
+
+    # Sort by descending score
+    sorted_items = sorted(scored_interests.items(), key=lambda kv: kv[1], reverse=True)
+    sorted_keywords = [kw for kw, _ in sorted_items]
+
+    primary: List[str] = []
+    secondary: List[str] = []
+
+    # Primary = interests that share tokens with the query
+    for kw, score in sorted_items:
+        if len(primary) >= max_primary:
+            break
+        if seed_tokens.intersection(set(_simple_tokenize(kw))):
+            primary.append(kw)
+
+    # Secondary = top remaining interests
+    for kw in sorted_keywords:
+        if kw not in primary and len(secondary) < max_secondary:
+            secondary.append(kw)
+
+    # If nothing overlaps, everything goes to secondary
+    if not primary:
+        secondary = sorted_keywords[:max_secondary]
+
+    return primary, secondary
+
+
+# Structured prompt generation
+def _format_personalization_for_llm(
+    primary_interests: List[str],
+    secondary_interests: List[str],
+) -> str:
+    """
+    Build a concise, structured personalization snippet for the LLM.
+
+    Format example:
+      "User primary interests: kubernetes, cloud; secondary interests: devops, linux."
+
+    This structure is far more interpretable for LLMs than
+    dumping raw comma-separated interests.
+    """
+    if not primary_interests and not secondary_interests:
         return ""
 
-    # Log the interests found
-    logger.info(f"Found interests for user {user_id}: explicit={explicit}, top_implicit={top_implicit}")
+    parts: List[str] = []
 
-    # Example:
-    # "User interests: photography, machine-learning, python, wildlife"
-    return "User interests: " + ", ".join(interests)
+    if primary_interests:
+        parts.append("primary interests: " + ", ".join(primary_interests))
+    if secondary_interests:
+        parts.append("secondary interests: " + ", ".join(secondary_interests))
+
+    return "User " + "; ".join(parts)
 
 
 async def expand_query(seed: str, user_id: str = None) -> str:
+    """
+    Expand a short query using the LLM, with optional personalized biasing
+    based on user interests (primary/secondary relevance ranking).
+    """
     seed = (seed or "").strip()
     if not seed:
         logger.warning("Empty seed query provided")
         return seed
-    
-    in_cache = query_cache.get(seed, OLLAMA_MODEL, OLLAMA_TEMP)
-    if in_cache:
-        # Cached expanded query returned
-        print("Query is in cache")
-        return in_cache
+
+    # Query cache lookup
+    cached = query_cache.get(seed, OLLAMA_MODEL, OLLAMA_TEMP)
+    if cached:
+        logger.info("Query is in cache")
+        return cached
     else:
-        print("Query not in cache")
-    
+        logger.info("Query not in cache")
 
-    logger.info(f"Expanding query: '{seed}' for user_id: {user_id}")
+    logger.info(f"Expanding query: '{seed}' for user_id={user_id}")
 
-    personalization = _get_personalization_context(user_id)
+    # Personalized interest relevance selection
+    personalization_snippet = ""
 
-    # Log the personalization context that will be used
-    if personalization:
-        logger.info(f"Using personalization context: {personalization}")
-    else:
-        logger.info("No personalization context available")
+    if user_id:
+        profile = user_profiles_col.find_one({"user_id": user_id})
+        if profile:
+            # Compute interest scores
+            scores = _compute_interest_scores(profile)
 
+            # Select relevant interests for THIS query
+            primary, secondary = _select_interests_for_query(seed, scores)
+
+            # Turn them into a structured prompt snippet
+            personalization_snippet = _format_personalization_for_llm(primary, secondary)
+
+            logger.info(
+                f"Personalization for user {user_id}: "
+                f"primary={primary}, secondary={secondary}"
+            )
+
+    # Build system prompt
     system_prompt = SYSTEM_PROMPT_BASE
-    if personalization:
-        system_prompt += f" Use these interests to bias expansions when relevant: {personalization}."
 
-    # Log the full system prompt being sent (optional - might be verbose)
+    if personalization_snippet:
+        system_prompt += (
+            " When expanding the query, gently bias toward these user preferences "
+            "only if they are relevant: "
+            f"{personalization_snippet}."
+        )
+
     logger.debug(f"System prompt: {system_prompt}")
 
+    # LLM request payload
     payload = {
         "model": OLLAMA_MODEL,
         "stream": False,
@@ -113,21 +282,27 @@ async def expand_query(seed: str, user_id: str = None) -> str:
         "prompt": seed,
     }
 
+    # Call Ollama
     try:
-        logger.debug(f"Sending request to Ollama with model: {OLLAMA_MODEL}, temperature: {OLLAMA_TEMP}")
-
         async with httpx.AsyncClient(timeout=30) as client:
-            r = await client.post(f"{OLLAMA_URL.rstrip('/')}/api/generate", json=payload)
+            response = await client.post(
+                f"{OLLAMA_URL.rstrip('/')}/api/generate",
+                json=payload,
+            )
 
-        r.raise_for_status()
-        data = r.json()
-        text = (data.get("response") or "").strip()
-        expanded = " ".join(text.split()) or seed
-    except Exception:
-        # fail-safe so search remains functional need this because of shitty gpu
+        response.raise_for_status()
+
+        data = response.json()
+        raw_text = (data.get("response") or "").strip()
+
+        expanded = " ".join(raw_text.split()) or seed
+        logger.info(f"Query enhanced: '{seed}' → '{expanded}'")
+
+    except Exception as e:
+        logger.error(f"Query expansion failed: {e}. Using original seed.")
         expanded = seed
 
-    #expanded query stored even if idential to seed
+    # Cache result
     query_cache.set(seed, OLLAMA_MODEL, OLLAMA_TEMP, expanded)
 
     return expanded

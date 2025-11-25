@@ -26,6 +26,21 @@ if not logger.handlers:
 
 logger.propagate = False
 
+MAX_LOG_ITEMS = 10  #adjust as needed for logging
+
+def _log_truncated_dict(label: str, data: dict, max_items: int = 10):
+    """
+    Logs only the first max_items of a dict to avoid giant logs.
+    Shows how many items were omitted.
+    """
+    items = list(data.items())
+    shown = dict(items[:max_items])
+
+    if len(items) > max_items:
+        logger.info(f"{label}: {shown} ... (+{len(items) - max_items} more)")
+    else:
+        logger.info(f"{label}: {shown}")
+
 
 # ---------------------------------------------------
 # Config
@@ -49,7 +64,7 @@ SYSTEM_PROMPT_BASE = (
 # Use a basic regex to identify "words" (letters/numbers/underscore)
 _TOKEN_WORD_REGEX = re.compile(r"\w+")
 
-
+#regex useful for extracting words
 def _simple_tokenize(text: str) -> List[str]:
     """
     Tokenize text into lowercase words for lightweight overlap checks.
@@ -70,9 +85,6 @@ def _simple_tokenize(text: str) -> List[str]:
 def _get_explicit_interest_keywords(profile: dict) -> List[str]:
     """
     Extract explicit interests from the user profile.
-
-    Expected shape:
-        profile["explicit_interests"] = [{"keyword": "python"}, {...}, ...]
     """
     explicit_raw = profile.get("explicit_interests", []) or []
     out: List[str] = []
@@ -83,20 +95,17 @@ def _get_explicit_interest_keywords(profile: dict) -> List[str]:
             if keyword:
                 out.append(str(keyword))
 
+    logger.info(f"[explicit] Extracted explicit interests: {out}")
     return out
 
 
 def _get_implicit_interest_scores(profile: dict) -> Dict[str, float]:
     """
     Extract implicit interests as {keyword: numeric_score}.
-
-    Supports both:
-        - dict form: {"ai": 2.4, "cloud": 1.2}
-        - list form: ["ai", "cloud"] → defaults to 1.0 each
     """
     raw = profile.get("implicit_interests", {}) or {}
 
-    # Dict form
+    #must be a dict, makes sure it is
     if isinstance(raw, dict):
         out: Dict[str, float] = {}
         for key, value in raw.items():
@@ -104,11 +113,9 @@ def _get_implicit_interest_scores(profile: dict) -> Dict[str, float]:
                 out[str(key)] = float(value)
             else:
                 out[str(key)] = 1.0
+        
+        _log_truncated_dict("[implicit] Extracted implicit interests (with scores)", out, MAX_LOG_ITEMS)
         return out
-
-    # List form
-    if isinstance(raw, list):
-        return {str(item): 1.0 for item in raw}
 
     return {}
 
@@ -146,6 +153,11 @@ def _compute_interest_scores(profile: dict) -> Dict[str, float]:
             if kw in tokens:
                 scores[kw] += 0.5
 
+    _log_truncated_dict(
+        "[scores] Combined explicit + implicit + history-based interest scores",
+        scores,
+        MAX_LOG_ITEMS
+    )
     return scores
 
 
@@ -160,8 +172,8 @@ def _select_interests_for_query(
     Select which interests matter for this query.
 
     Returns:
-        primary_interests   – Top-scoring interests with token overlap to query
-        secondary_interests – Next best interests (high score, but no overlap)
+        primary_interests   [] Top-scoring interests with token overlap to query
+        secondary_interests [] Next best interests (high score, but no overlap)
     """
     if not scored_interests:
         return [], []
@@ -191,6 +203,10 @@ def _select_interests_for_query(
     if not primary:
         secondary = sorted_keywords[:max_secondary]
 
+    logger.info(
+    f"[select] For seed='{seed_query}', primary interests={primary}, "
+    f"secondary interests={secondary}"
+    )
     return primary, secondary
 
 

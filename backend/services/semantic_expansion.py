@@ -277,6 +277,7 @@ async def expand_query(seed: str, user_id: Optional[str] = None) -> str:
         data = resp.json()
         raw = (data.get("response") or "").strip()
         expanded = " ".join(raw.split()) or seed
+        logger.info("Expanded prompt for seed='%s'", system_prompt)
         logger.info("Expanded query for seed='%s' -> '%s'", seed, expanded)
     except Exception as e:
         logger.exception("LLM expansion failed: %s. Falling back to seed.", e)

@@ -263,6 +263,15 @@ async def expand_query(seed: str, user_id: str = None) -> str:
     if not seed:
         logger.warning("Empty seed query provided")
         return seed
+    
+    in_cache = query_cache.get(seed, OLLAMA_MODEL, OLLAMA_TEMP)
+    if in_cache:
+        # Cached expanded query returned
+        print("Query is in cache")
+        return in_cache
+    else:
+        print("Query not in cache")
+    
 
     # Query cache lookup
     cached = query_cache.get(seed, OLLAMA_MODEL, OLLAMA_TEMP)

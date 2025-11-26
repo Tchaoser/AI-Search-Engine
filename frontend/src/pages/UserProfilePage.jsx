@@ -136,7 +136,7 @@ export default function UserProfilePage() {
             setImplicitInterests(sortedImplicit.slice(0, IMPLICIT_SHOW_N));
             setImplicitExclusions(data.implicit_exclusions || []);
             
-            notify({ type: "success", title: "Exclusion removed", message: `"${keyword}" re-enabled and back in implicit interests` });
+            notify({ type: "success", title: "Interest restored", message: `"${keyword}" has been re-enabled and added back to your interests.` });
         } catch (err) {
             notify({ type: "error", title: "Remove failed", message: err.message || "Could not remove exclusion" });
         } finally {

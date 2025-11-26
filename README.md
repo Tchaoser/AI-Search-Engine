@@ -48,6 +48,7 @@ backend/
 │  ├─ search_service.py            # Search pipeline (proxies to Google and logs queries/interactions)
 │  ├─ semantic_expansion.py        # Expands a user query into a richer one using an Ollama model.
 │  ├─ user_profile_service.py      # Aggregates queries/clicks and builds per-user interest profiles
+│  ├─ background_tasks.py         # Background thread to rebuild and maintain user profiles on a schedule
 │  └─ auth_service.py              # Handles user creation, authentication, and JWT tokens
 │
 ├─ scripts/

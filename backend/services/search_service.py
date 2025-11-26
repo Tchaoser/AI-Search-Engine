@@ -68,17 +68,3 @@ def search(query: str, user_id: str = None):
     # sort by total descending
     scored.sort(key=lambda x: -x[0])
     return [r for (_s, r) in scored]
-
-
-    # Assign base rank score (higher for earlier results)
-    scored = []
-    for idx, r in enumerate(results):
-        # base positional score: inverse of rank (1-based)
-        pos_score = max(0.0, (len(results) - idx)) / max(1.0, len(results))
-        personal_score = _score_result(r, profile)
-        total = pos_score + personal_score
-        scored.append((total, r))
-
-    # sort by total descending
-    scored.sort(key=lambda x: -x[0])
-    return [r for (_s, r) in scored]

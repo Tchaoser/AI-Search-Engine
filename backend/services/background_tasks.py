@@ -70,6 +70,7 @@ class ProfileRebuildThread(threading.Thread):
                 try:
                     build_user_profile(user_id)
                     rebuilt_count += 1
+                    logger.info(f"Profile rebuilt for user {user_id}")
                 except Exception as e:
                     logger.warning(f"Failed to rebuild profile for user {user_id}: {e}")
             

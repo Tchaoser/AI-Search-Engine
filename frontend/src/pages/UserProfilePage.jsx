@@ -13,6 +13,7 @@ export default function UserProfilePage() {
     const [userId] = useState(getCurrentUserId()); // fallback to "guest" is already handled inside getCurrentUserId
     const [explicitInterests, setExplicitInterests] = useState([]);
     const [implicitInterests, setImplicitInterests] = useState([]);
+    const [implicitExclusions, setImplicitExclusions] = useState([]);
     const [newInterest, setNewInterest] = useState("");
     const [loadingSave, setLoadingSave] = useState(false);
     const [loadingImplicitRemove, setLoadingImplicitRemove] = useState(false);
@@ -28,10 +29,13 @@ export default function UserProfilePage() {
                     .sort(([, aWeight], [, bWeight]) => bWeight - aWeight)
                     .map(([keyword, weight]) => ({ keyword, weight }));
                 setImplicitInterests(sortedImplicit.slice(0, IMPLICIT_SHOW_N));
+                // Set implicit exclusions
+                setImplicitExclusions(profile.implicit_exclusions || []);
             })
             .catch(err => {
                 setExplicitInterests([]);
                 setImplicitInterests([]);
+                setImplicitExclusions([]);
                 notify({ type: "error", title: "Load failed", message: err.message || "Could not load profile" });
             });
     }, [userId, notify]);
@@ -100,9 +104,41 @@ export default function UserProfilePage() {
                 .map(([keyword, weight]) => ({ keyword, weight }));
 
             setImplicitInterests(sortedImplicit.slice(0, IMPLICIT_SHOW_N));
+            setImplicitExclusions(data.implicit_exclusions || []);
             notify({ type: "success", title: "Implicit removed", message: `"${keyword}" removed from implicit interests` });
         } catch (err) {
             notify({ type: "error", title: "Remove failed", message: err.message || "Could not remove implicit interest" });
+        } finally {
+            setLoadingImplicitRemove(false);
+        }
+    };
+
+    // undo the implicit exclusion (re-enable the keyword)
+    const undoImplicitExclusion = async (keyword) => {
+        setLoadingImplicitRemove(true);
+        try {
+            const res = await fetch(`${API_URL}/profiles/implicit/exclusion/remove`, {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_id: userId, keyword })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || "Remove failed");
+
+            // Update exclusions list
+            setImplicitExclusions(data.implicit_exclusions || []);
+            
+            // Reload implicit interests to show the keyword again
+            const sortedImplicit = Object.entries(data.implicit_interests || {})
+                .sort(([, aWeight], [, bWeight]) => bWeight - aWeight)
+                .map(([keyword, weight]) => ({ keyword, weight }));
+
+            setImplicitInterests(sortedImplicit.slice(0, IMPLICIT_SHOW_N));
+            setImplicitExclusions(data.implicit_exclusions || []);
+            
+            notify({ type: "success", title: "Exclusion removed", message: `"${keyword}" re-enabled and back in implicit interests` });
+        } catch (err) {
+            notify({ type: "error", title: "Remove failed", message: err.message || "Could not remove exclusion" });
         } finally {
             setLoadingImplicitRemove(false);
         }
@@ -224,6 +260,33 @@ export default function UserProfilePage() {
                                     title="Remove implicit interest"
                                 >
                                     ×
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </section>
+
+            <section className="card">
+                <h3 className="text-lg font-semibold mb-2">Implicit Exclusions</h3>
+
+                {implicitExclusions.length === 0 && (
+                    <p className="text-gray-500 italic">No implicit exclusions.</p>
+                )}
+
+                {implicitExclusions.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                        {implicitExclusions.map((keyword) => (
+                            <div key={keyword} className="flex items-center gap-2">
+                                <span className="flex-1">{keyword}</span>
+
+                                <button
+                                    onClick={() => undoImplicitExclusion(keyword)}
+                                    disabled={loadingImplicitRemove}
+                                    title="Undo exclusion - re-enable this keyword"
+                                    className="btn btn-sm btn-link text-blue-500"
+                                >
+                                    Undo
                                 </button>
                             </div>
                         ))}

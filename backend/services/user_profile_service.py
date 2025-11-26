@@ -205,9 +205,19 @@ def build_user_profile(user_id: str,
     explicit_interests = existing_profile.get("explicit_interests", [])
     implicit_exclusions_raw = existing_profile.get("implicit_exclusions", [])
     implicit_exclusions = set([e.lower() for e in implicit_exclusions_raw])
+    explicit_set = set()
+    for item in explicit_interests:
+        if isinstance(item, str):
+            explicit_set.add(item.lower())
+        elif isinstance(item, dict) and "keyword" in item:
+            explicit_set.add(item["keyword"].lower())
 
-    # filter out excluded implicit interests (case-insensitive)
-    filtered_interests = {k: v for k, v in interests.items() if k.lower() not in implicit_exclusions}
+    filtered_interests = {
+        k: v
+        for k, v in interests.items()
+        if k.lower() not in implicit_exclusions
+        and k.lower() not in explicit_set
+    }
 
     profile_doc = {
         "user_id": user_id,

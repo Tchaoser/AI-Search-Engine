@@ -18,7 +18,12 @@ PROFILE_REBUILD_INTERVAL_MINUTES = int(os.getenv("PROFILE_REBUILD_INTERVAL_MINUT
 PROFILE_REBUILD_ENABLED = os.getenv("PROFILE_REBUILD_ENABLED", "true").lower() == "true"
 
 # Setup logging
-logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,  # Show INFO, WARNING, ERROR messages
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+
+logger = logging.getLogger("background_tasks")
 
 
 class ProfileRebuildThread(threading.Thread):

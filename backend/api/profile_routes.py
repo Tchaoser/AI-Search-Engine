@@ -1,10 +1,19 @@
+from typing import Optional
 from fastapi import APIRouter, Body, HTTPException, Depends
+from pydantic import BaseModel
 from datetime import datetime
 from services.user_profile_service import build_user_profile
 from services.db import user_profiles_col
 from api.utils import get_user_id_from_auth
 
 router = APIRouter()
+
+
+# --- Request models ---
+
+class UserOverride(BaseModel):
+    """Optional body model to allow admin override of user_id."""
+    user_id: Optional[str] = None
 
 
 # --- Helper functions ---
@@ -192,5 +201,69 @@ async def remove_implicit_exclusion(
         upsert=True
     )
 
+    profile = build_user_profile(effective_user)
+    return profile
+
+
+# --- Clear endpoints (clean FastAPI-friendly model for optional override) ---
+
+@router.post("/profiles/explicit/clear")
+async def clear_all_explicit_interests(
+        payload: UserOverride = Body(None),
+        auth_user: str = Depends(get_user_id_from_auth)
+):
+    """
+    Remove all explicit interests for the effective user.
+    This is destructive (deletes explicit interests).
+    """
+    effective_user = get_effective_user(auth_user, payload.user_id if payload else None)
+
+    profile = build_user_profile(effective_user)
+    profile["explicit_interests"] = []
+
+    user_profiles_col.update_one(
+        {"user_id": effective_user},
+        {"$set": profile},
+        upsert=True
+    )
+    return profile
+
+
+@router.post("/profiles/implicit/clear")
+async def clear_all_implicit_interests(
+        payload: UserOverride = Body(None),
+        auth_user: str = Depends(get_user_id_from_auth)
+):
+    """
+    Move all implicit interest keywords into implicit_exclusions (undoable).
+    This prevents them from showing up as implicit interests.
+
+    Accepts optional JSON body: {"user_id": "<id>"} to act on a different user (admin override).
+    """
+    effective_user = get_effective_user(auth_user, payload.user_id if payload else None)
+
+    # Use the rebuilt profile to get the current implicit_interests keys
+    profile = build_user_profile(effective_user)
+    implicit_keys = list(profile.get("implicit_interests", {}).keys())
+
+    # Read stored profile to update exclusions (preserve case & existing exclusions)
+    stored = user_profiles_col.find_one({"user_id": effective_user}) or {}
+    current_exclusions = stored.get("implicit_exclusions", []) or []
+
+    # Add implicit keys to exclusions (case-insensitive dedupe)
+    lower_excl = {e.lower() for e in current_exclusions}
+    for k in implicit_keys:
+        if k.lower() not in lower_excl:
+            current_exclusions.append(k)
+            lower_excl.add(k.lower())
+
+    # Persist updated exclusions
+    user_profiles_col.update_one(
+        {"user_id": effective_user},
+        {"$set": {"implicit_exclusions": current_exclusions}},
+        upsert=True
+    )
+
+    # Rebuild profile so implicit_interests are recalculated without these keys
     profile = build_user_profile(effective_user)
     return profile

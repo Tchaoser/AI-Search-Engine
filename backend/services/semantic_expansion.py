@@ -2,6 +2,9 @@
 import os
 import httpx
 from services.query_cache import query_cache #singleton cache imported
+from services.logger import AppLogger
+
+logger = AppLogger.get_logger(__name__)
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1")
@@ -24,10 +27,13 @@ async def expand_query(seed: str) -> str:
     in_cache = query_cache.get(seed, OLLAMA_MODEL, OLLAMA_TEMP)
     if in_cache:
         # Cached expanded query returned
-        print("Query is in cache")
+        logger.debug("Query expansion cache hit", extra={
+            "original": seed,
+            "expanded": in_cache
+        })
         return in_cache
     else:
-        print("Query not in cache")
+        logger.debug("Query expansion cache miss", extra={"original": seed})
     
 
     payload = {
@@ -45,12 +51,21 @@ async def expand_query(seed: str) -> str:
         data = r.json()
         text = (data.get("response") or "").strip()
         expanded = " ".join(text.split()) or seed
-    except Exception:
+    except Exception as e:
         # fail-safe so search remains functional need this because of shitty gpu
+        logger.warning("Query expansion failed, using original query", extra={
+            "original": seed,
+            "error": str(e)
+        }, exc_info=False)
         expanded = seed
     
     #expanded query stored even if idential to seed
     query_cache.set(seed, OLLAMA_MODEL, OLLAMA_TEMP, expanded)
+    logger.debug("Query expansion complete", extra={
+        "original": seed,
+        "expanded": expanded,
+        "same": seed == expanded
+    })
 
     return expanded
     

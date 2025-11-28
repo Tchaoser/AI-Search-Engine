@@ -8,22 +8,17 @@ up-to-date with session-aware weighting without blocking search requests.
 import os
 import threading
 import time
-import logging
 from datetime import datetime
 from services.db import queries_col, user_profiles_col
 from services.user_profile_service import build_user_profile
+from services.logger import AppLogger
 
 # Configuration
 PROFILE_REBUILD_INTERVAL_MINUTES = int(os.getenv("PROFILE_REBUILD_INTERVAL_MINUTES", 3))
 PROFILE_REBUILD_ENABLED = os.getenv("PROFILE_REBUILD_ENABLED", "true").lower() == "true"
 
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,  # Show INFO, WARNING, ERROR messages
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-)
-
-logger = logging.getLogger("background_tasks")
+# Get logger
+logger = AppLogger.get_logger(__name__)
 
 
 class ProfileRebuildThread(threading.Thread):
@@ -42,14 +37,19 @@ class ProfileRebuildThread(threading.Thread):
     
     def run(self):
         """Main thread loop: rebuild profiles at regular intervals."""
-        logger.info(f"Profile rebuild thread started (interval: {self.interval_seconds}s)")
+        logger.info("Profile rebuild thread started", extra={
+            "interval_minutes": PROFILE_REBUILD_INTERVAL_MINUTES,
+            "interval_seconds": self.interval_seconds
+        })
         self.running = True
         
         while self.running:
             try:
                 self._rebuild_all_profiles()
             except Exception as e:
-                logger.error(f"Error during profile rebuild cycle: {e}", exc_info=True)
+                logger.error("Error during profile rebuild cycle", extra={
+                    "error": str(e)
+                }, exc_info=True)
             
             # Sleep in small increments so we can exit quickly if needed
             for _ in range(int(self.interval_seconds)):
@@ -67,23 +67,35 @@ class ProfileRebuildThread(threading.Thread):
                 logger.debug("No users with queries found; skipping rebuild cycle")
                 return
             
-            logger.info(f"Starting profile rebuild cycle for {len(user_ids)} users")
+            logger.info("Profile rebuild cycle starting", extra={"user_count": len(user_ids)})
             start_time = datetime.utcnow()
             
             rebuilt_count = 0
+            failed_count = 0
             for user_id in user_ids:
                 try:
                     build_user_profile(user_id)
                     rebuilt_count += 1
-                    logger.info(f"Profile rebuilt for user {user_id}")
+                    logger.debug("User profile rebuilt", extra={"user_id": user_id})
                 except Exception as e:
-                    logger.warning(f"Failed to rebuild profile for user {user_id}: {e}")
+                    failed_count += 1
+                    logger.warning("Failed to rebuild profile", extra={
+                        "user_id": user_id,
+                        "error": str(e)
+                    }, exc_info=False)
             
             elapsed = (datetime.utcnow() - start_time).total_seconds()
-            logger.info(f"Profile rebuild cycle complete: {rebuilt_count}/{len(user_ids)} rebuilt in {elapsed:.2f}s")
+            logger.info("Profile rebuild cycle complete", extra={
+                "total_users": len(user_ids),
+                "rebuilt_count": rebuilt_count,
+                "failed_count": failed_count,
+                "duration_s": round(elapsed, 2)
+            })
         
         except Exception as e:
-            logger.error(f"Critical error in profile rebuild cycle: {e}", exc_info=True)
+            logger.error("Critical error in profile rebuild cycle", extra={
+                "error": str(e)
+            }, exc_info=True)
     
     def stop(self):
         """Stop the background thread gracefully."""

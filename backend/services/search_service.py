@@ -1,6 +1,9 @@
 from services.google_api import search_google
 from services.user_profile_service import preprocess, normalize_url
 from services.db import user_profiles_col
+from services.logger import AppLogger
+
+logger = AppLogger.get_logger(__name__)
 
 
 def _score_result(result: dict, profile: dict):
@@ -41,19 +44,34 @@ def search(query: str, user_id: str = None):
     
     Returns a list of results ordered by personalized score.
     """
+    logger.debug("Search initiated", extra={
+        "user_id": user_id,
+        "query": query
+    })
+    
     results = search_google(query)
+    logger.debug("Google API results received", extra={
+        "query": query,
+        "result_count": len(results)
+    })
 
     # If no user_id provided, skip personalization
     if not user_id:
+        logger.debug("Skipping personalization: no user_id", extra={"query": query})
         return results
 
     # Fetch cached profile from DB (no rebuild to reduce overhead)
     try:
         profile = user_profiles_col.find_one({"user_id": user_id})
-    except Exception:
+    except Exception as e:
+        logger.warning("Failed to fetch user profile", extra={
+            "user_id": user_id,
+            "error": str(e)
+        })
         profile = None
 
     if not profile:
+        logger.debug("No profile found, returning unranked results", extra={"user_id": user_id})
         return results
 
     # Assign base rank score (higher for earlier results)
@@ -67,4 +85,9 @@ def search(query: str, user_id: str = None):
 
     # sort by total descending
     scored.sort(key=lambda x: -x[0])
-    return [r for (_s, r) in scored]
+    reranked_results = [r for (_s, r) in scored]
+    logger.debug("Results re-ranked using user profile", extra={
+        "user_id": user_id,
+        "result_count": len(reranked_results)
+    })
+    return reranked_results

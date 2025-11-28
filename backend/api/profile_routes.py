@@ -2,23 +2,34 @@ from fastapi import APIRouter, Body, HTTPException, Depends
 from datetime import datetime
 from services.user_profile_service import build_user_profile
 from services.db import user_profiles_col
+from services.logger import AppLogger
 from api.utils import get_user_id_from_auth
 
 router = APIRouter()
+logger = AppLogger.get_logger(__name__)
 
 
 @router.get("/profiles/me")
 async def get_my_profile(user_id: str = Depends(get_user_id_from_auth)):
+    logger.debug("Fetching profile", extra={"user_id": user_id})
     profile = build_user_profile(user_id)
     if not profile:
+        logger.warning("Profile not found", extra={"user_id": user_id})
         raise HTTPException(status_code=404, detail="User profile not found")
+    logger.debug("Profile fetched", extra={
+        "user_id": user_id,
+        "implicit_count": len(profile.get("implicit_interests", {})),
+        "explicit_count": len(profile.get("explicit_interests", []))
+    })
     return profile
 
 
 @router.get("/profiles/{user_id}")
 async def get_user_profile(user_id: str):
+    logger.debug("Fetching profile for user", extra={"user_id": user_id})
     profile = build_user_profile(user_id)
     if not profile:
+        logger.warning("Profile not found", extra={"user_id": user_id})
         raise HTTPException(status_code=404, detail="User profile not found")
     return profile
 
@@ -39,6 +50,10 @@ async def add_explicit_interest(
 
     for e in profile["explicit_interests"]:
         if e["keyword"].lower() == keyword.lower():
+            logger.warning("Duplicate explicit interest", extra={
+                "user_id": effective_user,
+                "keyword": keyword
+            })
             raise HTTPException(status_code=400, detail="Keyword already exists")
 
     profile["explicit_interests"].append({
@@ -67,6 +82,11 @@ async def add_explicit_interest(
         {"$set": profile},
         upsert=True
     )
+    logger.info("Explicit interest added", extra={
+        "user_id": effective_user,
+        "keyword": keyword,
+        "weight": weight
+    })
 
     return profile
 
@@ -120,6 +140,10 @@ async def bulk_update_explicit_interests(
         {"$set": profile},
         upsert=True
     )
+    logger.info("Bulk explicit interests updated", extra={
+        "user_id": effective_user,
+        "update_count": len(updates)
+    })
 
     return profile
 
@@ -146,6 +170,10 @@ async def remove_explicit_interest(
         {"$set": profile},
         upsert=True
     )
+    logger.info("Explicit interest removed", extra={
+        "user_id": effective_user,
+        "keyword": keyword
+    })
 
     return profile
 

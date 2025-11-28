@@ -1,6 +1,9 @@
 import os
 import requests
 from dotenv import load_dotenv
+from services.logger import AppLogger
+
+logger = AppLogger.get_logger(__name__)
 
 load_dotenv()  # loads .env into environment
 
@@ -8,6 +11,7 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GOOGLE_CX = os.getenv("GOOGLE_CX")
 
 if not GOOGLE_API_KEY or not GOOGLE_CX:
+    logger.critical("Missing required Google API credentials")
     raise ValueError("Missing GOOGLE_API_KEY or GOOGLE_CX in environment variables (.env)")
 
 def search_google(query: str, num_results: int = 5):
@@ -18,15 +22,30 @@ def search_google(query: str, num_results: int = 5):
         "q": query,
         "num": num_results,
     }
-    resp = requests.get(base_url, params=params)
-    resp.raise_for_status()
-    data = resp.json()
-
-    results = []
-    for item in data.get("items", []):
-        results.append({
-            "title": item.get("title"),
-            "link": item.get("link"),
-            "snippet": item.get("snippet"),
+    try:
+        logger.debug("Calling Google Custom Search API", extra={
+            "query": query,
+            "num_results": num_results
         })
-    return results
+        resp = requests.get(base_url, params=params)
+        resp.raise_for_status()
+        data = resp.json()
+
+        results = []
+        for item in data.get("items", []):
+            results.append({
+                "title": item.get("title"),
+                "link": item.get("link"),
+                "snippet": item.get("snippet"),
+            })
+        logger.debug("Google Custom Search API call successful", extra={
+            "query": query,
+            "result_count": len(results)
+        })
+        return results
+    except requests.exceptions.RequestException as e:
+        logger.error("Google Custom Search API call failed", extra={
+            "query": query,
+            "error": str(e)
+        }, exc_info=True)
+        raise

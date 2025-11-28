@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.auth_routes import router as auth_router
 from api.search_routes import router as search_router
 from api.profile_routes import router as profile_router
-from services.background_tasks import start_background_tasks, stop_background_tasks
+from background_tasks import start_background_tasks, stop_background_tasks
 from services.logger import AppLogger
 
 # Initialize logger

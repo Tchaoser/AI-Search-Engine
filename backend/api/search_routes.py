@@ -29,7 +29,8 @@ async def search_endpoint(
     })
 
     if use_enhanced:
-        enhanced = await expand_query(q)   # safe fallback is implemented inside expand_query
+        # Pass user_id for personalization
+        enhanced = await expand_query(q, user_id=user_id)  # safe fallback implemented inside expand_query
         if enhanced != q:
             logger.debug("Query expanded", extra={
                 "original": q,

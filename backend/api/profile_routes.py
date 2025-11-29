@@ -5,7 +5,7 @@ from datetime import datetime
 from services.user_profile_service import build_user_profile
 from services.db import user_profiles_col
 from services.logger import AppLogger
-from api.utils import get_user_id_from_auth
+from api.utils import get_user_id_from_auth, require_user_id_from_auth
 
 router = APIRouter()
 logger = AppLogger.get_logger(__name__)
@@ -55,7 +55,7 @@ def promote_to_explicit(profile, keyword, weight=1.0):
 # --- Endpoints ---
 
 @router.get("/profiles/me")
-async def get_my_profile(user_id: str = Depends(get_user_id_from_auth)):
+async def get_my_profile(user_id: str = Depends(require_user_id_from_auth)):
     logger.debug("Fetching profile", extra={"user_id": user_id})
     profile = build_user_profile(user_id)
     if not profile:

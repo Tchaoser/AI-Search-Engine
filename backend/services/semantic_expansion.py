@@ -44,6 +44,11 @@ OLLAMA_TEMP = float(os.getenv("OLLAMA_TEMP", "0.4"))
 TOP_K_EXPLICIT = int(os.getenv("SE_EXP_TOP_K_EXPLICIT", "5"))
 TOP_K_IMPLICIT = int(os.getenv("SE_EXP_TOP_K_IMPLICIT", "5"))
 
+# Max allowed length for the personalization snippet (user interest context)
+MAX_SNIPPET_CHARS = int(os.getenv("SE_MAX_SNIPPET_CHARS", "300"))
+# Max allowed length for the full system prompt sent to the LLM
+MAX_SYSTEM_PROMPT_CHARS = int(os.getenv("SE_MAX_SYSTEM_PROMPT_CHARS", "1200"))
+
 SYSTEM_PROMPT_BASE = (
     "You expand short user queries into a single detailed search query. "
     "Keep it one line, clear, and specific (entities, synonyms/aliases in "
@@ -51,10 +56,55 @@ SYSTEM_PROMPT_BASE = (
 )
 
 # -----------------------
+# Normalize and Truncate
+# -----------------------
+
+def _normalize_single_line(text: str) -> str:
+    """
+    Collapse all whitespace (including newlines) to single spaces so prompts
+    stay on one line. Also strips leading/trailing spaces.
+    """
+    if not text:
+        return ""
+    return " ".join(str(text).split())
+
+
+def _truncate_text(text: str, max_len: int, context: str) -> str:
+    """
+    Truncate `text` to at most `max_len` characters, preserving readability.
+    - Prefer cutting at the last whitespace before the limit (if it's not too early).
+    - Always return a single-line string.
+    - Log the truncation event at INFO level.
+    """
+    if max_len <= 0:
+        # Treat <=0 as a no limit choice to avoid surprising behavior
+        return _normalize_single_line(text)
+
+    original = _normalize_single_line(text)
+    if len(original) <= max_len:
+        return original
+
+    truncated = original[:max_len]
+    last_space = truncated.rfind(" ")
+
+    # Avoid chopping to something tiny if the only spaces are very early
+    if last_space > int(max_len * 0.6):
+        truncated = truncated[:last_space]
+
+    truncated = truncated.rstrip() + " ..."
+    logger.info(
+        "%s truncated to %d characters (original=%d).",
+        context,
+        len(truncated),
+        len(original),
+    )
+    return truncated
+
+
+# -----------------------
 # Simple tokenizer
 # -----------------------
 _TOKEN_WORD_REGEX = re.compile(r"\w+")
-
 
 def _simple_tokenize(text: str) -> List[str]:
     """
@@ -181,7 +231,22 @@ def _format_personalization_snippet(explicit: List[str], implicit: List[str]) ->
     explicit_str = ", ".join(explicit) if explicit else "none"
     implicit_str = ", ".join(implicit) if implicit else "none"
 
-    return f"User interests provided for context: Explicit = {explicit_str}; Implicit = {implicit_str}."
+    snippet = (
+        f"User interests provided for context: "
+        f"Explicit = {explicit_str}; Implicit = {implicit_str}."
+    )
+
+    #return f"User interests provided for context: Explicit = {explicit_str}; Implicit = {implicit_str}."
+    snippet = _normalize_single_line(snippet)
+
+    if MAX_SNIPPET_CHARS > 0:
+        snippet = _truncate_text(
+            snippet,
+            MAX_SNIPPET_CHARS,
+            context="Personalization snippet",
+        )
+    return snippet
+
 
 
 # -----------------------
@@ -239,6 +304,16 @@ async def expand_query(seed: str, user_id: Optional[str] = None) -> str:
     except Exception as e:
         logger.exception("Error during personalization extraction/selection: %s", e)
         system_prompt = SYSTEM_PROMPT_BASE
+
+    #2.1 
+    system_prompt = _normalize_single_line(system_prompt)
+
+    if MAX_SYSTEM_PROMPT_CHARS > 0 and len(system_prompt) > MAX_SYSTEM_PROMPT_CHARS:
+        system_prompt = _truncate_text(
+            system_prompt,
+            MAX_SYSTEM_PROMPT_CHARS,
+            context="System prompt",
+        )
 
     # 3) Prepare LLM payload and call
     expanded = seed

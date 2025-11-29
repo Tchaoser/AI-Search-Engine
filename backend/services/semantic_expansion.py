@@ -57,6 +57,12 @@ _TOKEN_WORD_REGEX = re.compile(r"\w+")
 
 
 def _simple_tokenize(text: str) -> List[str]:
+    """
+    Tokenize text into lowercase word tokens.
+
+    This is intentionally lightweight — it's only used for normalization or
+    lightweight overlap checks if needed in future changes.
+    """
     if not text:
         return []
     return [t.lower() for t in _TOKEN_WORD_REGEX.findall(text)]
@@ -66,6 +72,15 @@ def _simple_tokenize(text: str) -> List[str]:
 # Interest extraction
 # -----------------------
 def _extract_explicit(profile: dict) -> Dict[str, float]:
+    """
+    Extract explicit interests from the user profile.
+
+    The profile expects `explicit_interests` to be a list of objects:
+      { "keyword": <str>, "weight": <float 0..1> }
+
+    Returns:
+      dict mapping lowercase keyword -> weight (0..1)
+    """
     out: Dict[str, float] = {}
     raw = profile.get("explicit_interests") or []
 
@@ -84,14 +99,26 @@ def _extract_explicit(profile: dict) -> Dict[str, float]:
             w = float(w)
         except Exception:
             w = 1.0
+        # clamp to [0, 1]
         w = max(0.0, min(1.0, w))
         key = str(kw).lower()
+        # keep the raw weight (0..1) for ranking within explicit interests
         out[key] = out.get(key, 0.0) + w
 
+    # logger.info("[Personalization] Extracted explicit interests (raw weights): %s", out)
     return out
 
 
 def _extract_implicit(profile: dict) -> Dict[str, float]:
+    """
+    Extract implicit interests from the user profile.
+
+    The profile expects `implicit_interests` to be a dict:
+      { "<keyword>": <numeric_score>, ... }
+
+    Returns:
+      dict mapping lowercase keyword -> numeric_score (as stored)
+    """
     out: Dict[str, float] = {}
     raw = profile.get("implicit_interests") or {}
 
@@ -103,10 +130,12 @@ def _extract_implicit(profile: dict) -> Dict[str, float]:
         try:
             v = float(val)
         except Exception:
+            # fallback to a modest score if DB value is malformed
             v = 1.0
         key = str(kw).lower()
         out[key] = out.get(key, 0.0) + v
 
+    # logger.info("[Personalization] Extracted implicit interests (raw scores): %s", out)
     return out
 
 
@@ -114,6 +143,14 @@ def _extract_implicit(profile: dict) -> Dict[str, float]:
 # Top-K selection
 # -----------------------
 def _select_top_k(explicit: Dict[str, float], implicit: Dict[str, float]) -> Tuple[List[str], List[str]]:
+    """
+    Independently select top-K explicit and top-K implicit interests.
+
+    Returns:
+      (top_explicit_keywords, top_implicit_keywords) — each list ordered by
+      descending score (highest first). If there are fewer than K items, returns
+      whatever is available.
+    """
     explicit_sorted = sorted(explicit.items(), key=lambda kv: kv[1], reverse=True)
     implicit_sorted = sorted(implicit.items(), key=lambda kv: kv[1], reverse=True)
 
@@ -130,6 +167,14 @@ def _select_top_k(explicit: Dict[str, float], implicit: Dict[str, float]) -> Tup
 # Format personalization snippet
 # -----------------------
 def _format_personalization_snippet(explicit: List[str], implicit: List[str]) -> str:
+    """
+    Build a short, structured personalization snippet to include in the system prompt.
+
+    Example output:
+      "User interests provided for context: Explicit = jobs, pokemon; Implicit = marvel, spiderman"
+
+    The LLM should treat these as contextual signals and apply them only when relevant.
+    """
     if not explicit and not implicit:
         return ""
 
@@ -143,6 +188,22 @@ def _format_personalization_snippet(explicit: List[str], implicit: List[str]) ->
 # Main expansion entrypoint
 # -----------------------
 async def expand_query(seed: str, user_id: Optional[str] = None) -> str:
+    """
+    Expand the user's `seed` query using the configured LLM, optionally biasing
+    the expansion using the user's profile interests.
+
+    Steps:
+      1. Return cached expansion (if present).
+      2. If user_id provided and profile exists:
+           - extract explicit + implicit interests (no transforms)
+           - take top-K from each independently
+           - create a short personalization snippet and attach it to the system prompt
+      3. Call the LLM and return the expanded query (or the seed on failure).
+      4. Cache the result.
+
+    Returns:
+      The expanded query string (single-line, whitespace-normalized).
+    """
     seed = (seed or "").strip()
     if not seed:
         logger.warning("expand_query called with empty seed.")

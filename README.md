@@ -43,6 +43,7 @@ backend/
 │
 ├─ services/
 │  ├─ __init__.py                  # Marks `services` as a Python package
+│  ├─ logger.py                    # Centralized logging system (file + console, structured logs)
 │  ├─ db.py                        # MongoDB connection and collection handles
 │  ├─ google_api.py                # Google Custom Search API calls
 │  ├─ search_service.py            # Search pipeline (proxies to Google and logs queries/interactions)

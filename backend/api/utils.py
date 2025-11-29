@@ -10,4 +10,9 @@ async def get_user_id_from_auth(authorization: str = Header(None)):
         return "guest"
     token = parts[1]
     payload = auth_service.decode_access_token(token)
+    if not payload:
+        # TODO: handle expired/invalid token properly:
+        #   - Option 1: forcefully log the user out
+        #   - Option 2: return an error explaining the token is expired
+        return "guest"
     return payload.get("sub") or payload.get("user_id") or "guest"

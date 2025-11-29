@@ -4,9 +4,11 @@ from pydantic import BaseModel
 from datetime import datetime
 from services.user_profile_service import build_user_profile
 from services.db import user_profiles_col
+from services.logger import AppLogger
 from api.utils import get_user_id_from_auth
 
 router = APIRouter()
+logger = AppLogger.get_logger(__name__)
 
 
 # --- Request models ---
@@ -25,32 +27,28 @@ def get_effective_user(auth_user, user_id):
 
 def remove_from_implicit(profile, keyword):
     """Remove keyword from implicit_exclusions and implicit_interests."""
-    # Remove from exclusions
     exclusions = profile.get("implicit_exclusions", [])
     profile["implicit_exclusions"] = [e for e in exclusions if e.lower() != keyword.lower()]
 
-    # Remove from implicit interests
     if "implicit_interests" in profile and profile.get("implicit_interests"):
         profile["implicit_interests"] = {
-            k: v for k, v in profile["implicit_interests"].items() if k.lower() != keyword.lower()
+            k: v for k, v in profile["implicit_interests"].items()
+            if k.lower() != keyword.lower()
         }
 
 
 def promote_to_explicit(profile, keyword, weight=1.0):
     """Add a keyword as explicit interest and remove it from implicit lists."""
-    # Check for duplicate
     existing_keywords = {e["keyword"].lower() for e in profile.get("explicit_interests", [])}
     if keyword.lower() in existing_keywords:
         raise HTTPException(status_code=400, detail="Keyword already exists")
 
-    # Append new explicit interest
     profile.setdefault("explicit_interests", []).append({
         "keyword": keyword,
         "weight": weight,
         "last_updated": datetime.utcnow().isoformat()
     })
 
-    # Remove from implicit exclusions and implicit interests
     remove_from_implicit(profile, keyword)
 
 
@@ -58,16 +56,25 @@ def promote_to_explicit(profile, keyword, weight=1.0):
 
 @router.get("/profiles/me")
 async def get_my_profile(user_id: str = Depends(get_user_id_from_auth)):
+    logger.debug("Fetching profile", extra={"user_id": user_id})
     profile = build_user_profile(user_id)
     if not profile:
+        logger.warning("Profile not found", extra={"user_id": user_id})
         raise HTTPException(status_code=404, detail="User profile not found")
+    logger.debug("Profile fetched", extra={
+        "user_id": user_id,
+        "implicit_count": len(profile.get("implicit_interests", {})),
+        "explicit_count": len(profile.get("explicit_interests", []))
+    })
     return profile
 
 
 @router.get("/profiles/{user_id}")
 async def get_user_profile(user_id: str):
+    logger.debug("Fetching profile for user", extra={"user_id": user_id})
     profile = build_user_profile(user_id)
     if not profile:
+        logger.warning("Profile not found", extra={"user_id": user_id})
         raise HTTPException(status_code=404, detail="User profile not found")
     return profile
 
@@ -81,6 +88,7 @@ async def add_explicit_interest(
 ):
     effective_user = get_effective_user(auth_user, user_id)
     profile = build_user_profile(effective_user)
+
     promote_to_explicit(profile, keyword, weight)
 
     user_profiles_col.update_one(
@@ -88,6 +96,13 @@ async def add_explicit_interest(
         {"$set": profile},
         upsert=True
     )
+
+    logger.info("Explicit interest added", extra={
+        "user_id": effective_user,
+        "keyword": keyword,
+        "weight": weight
+    })
+
     return profile
 
 
@@ -100,7 +115,6 @@ async def bulk_update_explicit_interests(
     effective_user = get_effective_user(auth_user, user_id)
     profile = build_user_profile(effective_user)
 
-    # Map current explicit interests for quick update
     keyword_map = {e["keyword"].lower(): e for e in profile.get("explicit_interests", [])}
 
     for item in updates:
@@ -109,14 +123,11 @@ async def bulk_update_explicit_interests(
         key = kw.lower()
 
         if key in keyword_map:
-            # Update weight and timestamp
             keyword_map[key]["weight"] = wt
             keyword_map[key]["last_updated"] = datetime.utcnow().isoformat()
         else:
-            # Add new explicit interest
             promote_to_explicit(profile, kw, wt)
 
-    # Replace explicit interests list with updated map values
     profile["explicit_interests"] = list(keyword_map.values()) + [
         e for e in profile.get("explicit_interests", [])
         if e["keyword"].lower() not in keyword_map
@@ -127,6 +138,12 @@ async def bulk_update_explicit_interests(
         {"$set": profile},
         upsert=True
     )
+
+    logger.info("Bulk explicit interests updated", extra={
+        "user_id": effective_user,
+        "update_count": len(updates)
+    })
+
     return profile
 
 
@@ -149,6 +166,12 @@ async def remove_explicit_interest(
         {"$set": profile},
         upsert=True
     )
+
+    logger.info("Explicit interest removed", extra={
+        "user_id": effective_user,
+        "keyword": keyword
+    })
+
     return profile
 
 
@@ -184,7 +207,6 @@ async def remove_implicit_exclusion(
         keyword: str = Body(...),
         auth_user: str = Depends(get_user_id_from_auth)
 ):
-    """Undo a previously excluded implicit interest"""
     effective_user = get_effective_user(auth_user, user_id)
 
     if not keyword:
@@ -193,7 +215,6 @@ async def remove_implicit_exclusion(
     existing_profile = user_profiles_col.find_one({"user_id": effective_user}) or {}
     exclusions = existing_profile.get("implicit_exclusions", [])
 
-    # Remove the keyword from exclusions
     exclusions = [e for e in exclusions if e.lower() != keyword.lower()]
     user_profiles_col.update_one(
         {"user_id": effective_user},
@@ -205,17 +226,13 @@ async def remove_implicit_exclusion(
     return profile
 
 
-# --- Clear endpoints (clean FastAPI-friendly model for optional override) ---
+# --- Clear endpoints ---
 
 @router.post("/profiles/explicit/clear")
 async def clear_all_explicit_interests(
         payload: UserOverride = Body(None),
         auth_user: str = Depends(get_user_id_from_auth)
 ):
-    """
-    Remove all explicit interests for the effective user.
-    This is destructive (deletes explicit interests).
-    """
     effective_user = get_effective_user(auth_user, payload.user_id if payload else None)
 
     profile = build_user_profile(effective_user)
@@ -234,36 +251,25 @@ async def clear_all_implicit_interests(
         payload: UserOverride = Body(None),
         auth_user: str = Depends(get_user_id_from_auth)
 ):
-    """
-    Move all implicit interest keywords into implicit_exclusions (undoable).
-    This prevents them from showing up as implicit interests.
-
-    Accepts optional JSON body: {"user_id": "<id>"} to act on a different user (admin override).
-    """
     effective_user = get_effective_user(auth_user, payload.user_id if payload else None)
 
-    # Use the rebuilt profile to get the current implicit_interests keys
     profile = build_user_profile(effective_user)
     implicit_keys = list(profile.get("implicit_interests", {}).keys())
 
-    # Read stored profile to update exclusions (preserve case & existing exclusions)
     stored = user_profiles_col.find_one({"user_id": effective_user}) or {}
     current_exclusions = stored.get("implicit_exclusions", []) or []
 
-    # Add implicit keys to exclusions (case-insensitive dedupe)
     lower_excl = {e.lower() for e in current_exclusions}
     for k in implicit_keys:
         if k.lower() not in lower_excl:
             current_exclusions.append(k)
             lower_excl.add(k.lower())
 
-    # Persist updated exclusions
     user_profiles_col.update_one(
         {"user_id": effective_user},
         {"$set": {"implicit_exclusions": current_exclusions}},
         upsert=True
     )
 
-    # Rebuild profile so implicit_interests are recalculated without these keys
     profile = build_user_profile(effective_user)
     return profile

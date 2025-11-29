@@ -5,6 +5,9 @@ import re
 import math
 from urllib.parse import urlparse
 from services.db import queries_col, interactions_col, user_profiles_col, discarded_tokens_col
+from services.logger import AppLogger
+
+logger = AppLogger.get_logger(__name__)
 
 # Session decay: interactions within this window get a boost multiplier
 # Default: 480 minutes = 8 hours
@@ -211,6 +214,8 @@ def build_user_profile(user_id: str,
 
     Returns the profile document saved in MongoDB.
     """
+    logger.debug("Building user profile", extra={"user_id": user_id})
+    
     if session_decay_minutes is None:
         session_decay_minutes = SESSION_DECAY_MINUTES
     
@@ -245,6 +250,14 @@ def build_user_profile(user_id: str,
         elif isinstance(item, dict) and "keyword" in item:
             explicit_set.add(item["keyword"].lower())
 
+    logger.debug("Profile aggregation complete", extra={
+        "user_id": user_id,
+        "implicit_count": len(interests),
+        "explicit_count": len(explicit_interests),
+        "query_count": len(query_history),
+        "discarded_token_types": len(discarded_counter)
+    })
+
     filtered_interests = {
         k: v
         for k, v in interests.items()
@@ -264,7 +277,19 @@ def build_user_profile(user_id: str,
     }
 
     # Persist profile
-    user_profiles_col.update_one({"user_id": user_id}, {"$set": profile_doc}, upsert=True)
+    try:
+        user_profiles_col.update_one({"user_id": user_id}, {"$set": profile_doc}, upsert=True)
+        logger.info("User profile saved", extra={
+            "user_id": user_id,
+            "implicit_count": len(filtered_interests),
+            "explicit_count": len(explicit_interests)
+        })
+    except Exception as e:
+        logger.error("Failed to save user profile", extra={
+            "user_id": user_id,
+            "error": str(e)
+        }, exc_info=True)
+        raise
 
     # Persist discarded tokens counts for later analysis
     now = datetime.utcnow().isoformat()

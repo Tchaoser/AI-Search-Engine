@@ -10,28 +10,19 @@ Overview
 This module expands short user queries using an LLM (via Ollama) and can
 optionally bias expansions using a user's explicit and implicit interests.
 
-Design principles for this variant
- - Keep explicit and implicit interests independent (no scaling/transforms).
- - Select top-K explicit interests (ranked by the DB weight, which is 0..1).
- - Select top-K implicit interests (ranked by the DB numeric score).
- - Provide both lists directly to the LLM in a short, structured snippet.
- - Keep behavior conservative: do not force personalization; let the model
-   apply interests only when relevant.
- - Keep logging consistent and helpful for debugging.
- - If anything fails, fall back to returning the original seed query.
- - No history boosting or thresholds in this module.
-
-Refactor notes (future TODO):
- - Consider moving prompt-building to its own class for easier testing.
- - Consider injecting `user_profiles_col` for easier unit testing/mocking.
- - Consider adding a small diagnostics mode (ENV flag) for verbose logs.
+Design principles
+-----------------
+- Keep explicit and implicit interests independent (no scaling/transforms)
+- Select top-K explicit interests (ranked by the DB weight, which is 0..1)
+- Select top-K implicit interests (ranked by the DB numeric score)
+- Provide both lists directly to the LLM in a short, structured snippet
+- Keep behavior conservative: do not force personalization
+- Keep logging consistent and helpful for debugging
+- Fall back to returning the original seed query if anything fails
 """
 
 from __future__ import annotations
-
 import os
-import sys
-import logging
 import re
 from typing import Dict, List, Optional, Tuple
 
@@ -39,6 +30,9 @@ import httpx
 
 from services.query_cache import query_cache
 from services.db import user_profiles_col
+from services.logger import AppLogger
+
+logger = AppLogger.get_logger(__name__)
 
 # -----------------------
 # Configuration
@@ -47,7 +41,6 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1")
 OLLAMA_TEMP = float(os.getenv("OLLAMA_TEMP", "0.4"))
 
-# How many explicit + implicit interests to expose to the LLM
 TOP_K_EXPLICIT = int(os.getenv("SE_EXP_TOP_K_EXPLICIT", "5"))
 TOP_K_IMPLICIT = int(os.getenv("SE_EXP_TOP_K_IMPLICIT", "5"))
 
@@ -58,18 +51,7 @@ SYSTEM_PROMPT_BASE = (
 )
 
 # -----------------------
-# Logging
-# -----------------------
-logger = logging.getLogger(__name__)
-if not logger.handlers:
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
-    logger.addHandler(handler)
-logger.setLevel(logging.INFO)
-logger.propagate = False
-
-# -----------------------
-# Simple tokenizer (used only for normalization, not for matching logic)
+# Simple tokenizer
 # -----------------------
 _TOKEN_WORD_REGEX = re.compile(r"\w+")
 
@@ -169,7 +151,6 @@ def _select_top_k(explicit: Dict[str, float], implicit: Dict[str, float]) -> Tup
       descending score (highest first). If there are fewer than K items, returns
       whatever is available.
     """
-    # sort descending by value
     explicit_sorted = sorted(explicit.items(), key=lambda kv: kv[1], reverse=True)
     implicit_sorted = sorted(implicit.items(), key=lambda kv: kv[1], reverse=True)
 
@@ -231,8 +212,10 @@ async def expand_query(seed: str, user_id: Optional[str] = None) -> str:
     # 1) Cache check
     cached = query_cache.get(seed, OLLAMA_MODEL, OLLAMA_TEMP)
     if cached:
-        logger.info("[Semantic] Using cached expansion for seed='%s'", seed)
+        logger.debug("Query expansion cache hit", extra={"original": seed, "expanded": cached})
         return cached
+    else:
+        logger.debug("Query expansion cache miss", extra={"original": seed})
 
     # 2) Build system prompt
     system_prompt = SYSTEM_PROMPT_BASE
@@ -244,10 +227,8 @@ async def expand_query(seed: str, user_id: Optional[str] = None) -> str:
                 implicit_map = _extract_implicit(profile)
 
                 top_explicit, top_implicit = _select_top_k(explicit_map, implicit_map)
-
                 snippet = _format_personalization_snippet(top_explicit, top_implicit)
                 if snippet:
-                    # keep snippet concise and instructive
                     system_prompt = (
                         f"{SYSTEM_PROMPT_BASE} When expanding the query, consider "
                         f"the following user interest context (apply only when relevant): {snippet}"
@@ -256,11 +237,11 @@ async def expand_query(seed: str, user_id: Optional[str] = None) -> str:
             else:
                 logger.info("No profile found for user_id=%s", user_id)
     except Exception as e:
-        # never fail the whole expansion pipeline due to personalization errors
         logger.exception("Error during personalization extraction/selection: %s", e)
         system_prompt = SYSTEM_PROMPT_BASE
 
     # 3) Prepare LLM payload and call
+    expanded = seed
     payload = {
         "model": OLLAMA_MODEL,
         "stream": False,
@@ -268,24 +249,24 @@ async def expand_query(seed: str, user_id: Optional[str] = None) -> str:
         "system": system_prompt,
         "prompt": seed,
     }
-
-    expanded = seed
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(f"{OLLAMA_URL.rstrip('/')}/api/generate", json=payload)
         resp.raise_for_status()
-        data = resp.json()
-        raw = (data.get("response") or "").strip()
+        raw = (resp.json().get("response") or "").strip()
         expanded = " ".join(raw.split()) or seed
-        logger.info("Expanded prompt for seed='%s'", system_prompt)
         logger.info("Expanded query for seed='%s' -> '%s'", seed, expanded)
     except Exception as e:
-        logger.exception("LLM expansion failed: %s. Falling back to seed.", e)
+        logger.warning("Query expansion failed, using original seed='%s', error=%s", seed, e)
         expanded = seed
 
-    # 4) Cache the result
+    # 4) Cache result (even if identical to seed)
     try:
         query_cache.set(seed, OLLAMA_MODEL, OLLAMA_TEMP, expanded)
+        logger.debug(
+            "Query expansion complete",
+            extra={"original": seed, "expanded": expanded, "same": seed == expanded},
+        )
     except Exception:
         logger.exception("Failed to write expansion result to cache.")
 

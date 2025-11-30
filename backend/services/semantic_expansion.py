@@ -48,6 +48,8 @@ TOP_K_IMPLICIT = int(os.getenv("SE_EXP_TOP_K_IMPLICIT", "5"))
 MAX_SNIPPET_CHARS = int(os.getenv("SE_MAX_SNIPPET_CHARS", "300"))
 # Max allowed length for the full system prompt sent to the LLM
 MAX_SYSTEM_PROMPT_CHARS = int(os.getenv("SE_MAX_SYSTEM_PROMPT_CHARS", "1200"))
+# Max allowed length for the user prompt (raw seed query)
+MAX_USER_PROMPT_CHARS = int(os.getenv("SE_MAX_USER_PROMPT_CHARS", "300"))
 
 SYSTEM_PROMPT_BASE = (
     "You expand short user queries into a single detailed search query. "
@@ -270,6 +272,12 @@ async def expand_query(seed: str, user_id: Optional[str] = None) -> str:
       The expanded query string (single-line, whitespace-normalized).
     """
     seed = (seed or "").strip()
+    seed = _normalize_single_line(seed)
+
+    # Enforce max length on the user prompt BEFORE cache, personalization, or LLM call
+    if MAX_USER_PROMPT_CHARS > 0 and len(seed) > MAX_USER_PROMPT_CHARS:
+        seed = _truncate_text(seed, MAX_USER_PROMPT_CHARS, context="User prompt")
+
     if not seed:
         logger.warning("expand_query called with empty seed.")
         return seed

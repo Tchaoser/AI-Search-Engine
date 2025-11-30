@@ -71,7 +71,7 @@ def _normalize_single_line(text: str) -> str:
 
 def _truncate_text(text: str, max_len: int, context: str) -> str:
     """
-    Truncate `text` to at most `max_len` characters, preserving readability.
+    Truncate `text` to at most `max_len` characters, preserving readability. Simple truncation.
     - Prefer cutting at the last whitespace before the limit (if it's not too early).
     - Always return a single-line string.
     - Log the truncation event at INFO level.

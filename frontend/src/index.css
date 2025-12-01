@@ -38,7 +38,7 @@ body {
 
 .navbar {
     width: 100%;
-    background-color: #0b3460; /* deep navy from wireframe */
+    background-color: #0b3460; /* deep navy */
     padding: 0.75rem 1.5rem;
 }
 
@@ -74,7 +74,7 @@ body {
 }
 
 .nav-item.active {
-    background: #26bbaa; /* teal highlight from wireframe */
+    background: #26bbaa; /* teal highlight */
     color: black;
 }
 
@@ -102,7 +102,6 @@ body {
     background: rgba(255,255,255,0.15);
 }
 
-/* Dropdown panel */
 .dropdown-menu {
     position: absolute;
     top: calc(100% + 6px);
@@ -128,7 +127,7 @@ body {
 }
 
 /* ============================= */
-/* HERO LANDING PAGE (STATE 1)   */
+/* HERO LANDING PAGE             */
 /* ============================= */
 
 .search-hero {
@@ -158,10 +157,9 @@ body {
 }
 
 /* ============================= */
-/* SEARCH BAR  (WIRE FRAME CORRECT) */
+/* SEARCH BAR                    */
 /* ============================= */
 
-/* Layout wrapper for input + button */
 .searchbar-wrapper {
     display: flex;
     justify-content: center;
@@ -170,7 +168,6 @@ body {
     width: 100%;
 }
 
-/* The white rounded box */
 .searchbar-container {
     display: flex;
     align-items: center;
@@ -190,14 +187,12 @@ body {
     max-width: 950px;
 }
 
-/* Magnifying glass icon */
 .searchbar-icon {
     display: flex;
     align-items: center;
     margin-right: 0.75rem;
 }
 
-/* Input inside white bar */
 .searchbar-input-real {
     flex: 1;
     border: none;
@@ -206,9 +201,8 @@ body {
     font-size: 1.15rem;
 }
 
-/* Button outside the bar */
 .searchbar-btn {
-    background: #1e4ed8; /* strong blue search button */
+    background: #1e4ed8;
     color: white;
     border: none;
     padding: 0.6rem 1.5rem;
@@ -223,7 +217,7 @@ body {
 }
 
 /* ============================= */
-/* RESULTS PAGE (STATE 2)        */
+/* RESULTS PAGE                  */
 /* ============================= */
 
 .results-page {
@@ -258,7 +252,7 @@ body {
 }
 
 /* ============================= */
-/* RESULT CARDS (clean version)  */
+/* RESULT CARDS                  */
 /* ============================= */
 
 .result-card {
@@ -296,7 +290,6 @@ body {
     margin-top: 0.2rem;
 }
 
-/* Buttons (Relevant / Not Relevant) */
 .result-actions {
     display: flex;
     flex-direction: column;
@@ -328,3 +321,104 @@ body {
 
 .text-muted { color: #6b7280; }
 .text-red { color: #dc2626; }
+
+/* ======================================================== */
+/* ===============  PROFILE PAGE STYLING  ================= */
+/* ======================================================== */
+
+.profile-page {
+    margin-top: 2.5rem;
+}
+
+.profile-card {
+    background: white;
+    padding: 1.6rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    margin-bottom: 2rem;
+}
+
+.profile-section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #123C73;
+    margin-bottom: 1rem;
+}
+
+.profile-input {
+    width: 100%;
+    padding: 0.7rem;
+    border: 2px solid #26bbaa;
+    border-radius: 0.5rem;
+    margin-bottom: 0.8rem;
+    font-size: 1rem;
+}
+
+.profile-add-btn,
+.profile-save-btn {
+    background: #0b3460;
+    color: white;
+    padding: 0.45rem 1.1rem;
+    border-radius: 0.4rem;
+    border: none;
+    cursor: pointer;
+    margin-bottom: 1rem;
+}
+
+.profile-list {
+    margin-top: 1rem;
+}
+
+.profile-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.9rem;
+}
+
+.profile-keyword {
+    flex: 1;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #123C73; /* navy from wireframe line color */
+}
+
+.profile-slider {
+    flex: 1.2;
+    accent-color: #26bbaa;  /* same teal as the active nav pill */
+}
+
+.profile-score {
+    width: 45px;
+    text-align: right;
+    color: #4b5563;
+    font-weight: 600;
+}
+
+.profile-remove-btn {
+    background: #0b3460;;
+    border: 1px solid #0b3460;
+    color: white;
+    padding: 0.15rem 0.45rem;
+    border-radius: 0.3rem;
+    cursor: pointer;
+}
+
+.profile-upgrade-btn {
+    background: #0b3460;;
+    color: white;
+    font-size: 0.85rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 0.3rem;
+    border: none;
+    cursor: pointer;
+}
+
+.profile-undo-btn {
+    background: #0b3460;;
+    color: white;
+    padding: 0.35rem 0.8rem;
+    border-radius: 0.35rem;
+    border: none;
+    cursor: pointer;
+}

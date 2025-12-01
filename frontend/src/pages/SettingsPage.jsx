@@ -33,7 +33,7 @@ export default function SettingsPage() {
                         </p>
                     </div>
 
-                    {/* NEW PERFECT TOGGLE */}
+                    {/* TOGGLE */}
                     <div
                         className={`settings-switch ${useEnhancedQuery ? "on" : ""}`}
                         onClick={() => {

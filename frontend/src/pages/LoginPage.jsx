@@ -8,7 +8,7 @@ export default function LoginPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [err, setErr] = useState(null);
-    const navigate = useNavigate(); // <-- add navigation
+    const navigate = useNavigate();
 
     const submit = async (e) => {
         e.preventDefault();
@@ -19,31 +19,86 @@ export default function LoginPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ username, password })
             });
+
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || "Login failed");
 
-            // Save the auth info
-            saveAuth({ access_token: data.access_token, user_id: data.user_id });
+            saveAuth({
+                access_token: data.access_token,
+                user_id: data.user_id
+            });
 
-            // Redirect to home page
             navigate("/");
-
-            // Force update any user-dependent components if needed
         } catch (e) {
             setErr(e.message || "Login failed");
         }
     };
 
     return (
-        <div className="card">
-            <h3>Login</h3>
-            {err && <p className="text-red">{err}</p>}
-            <form onSubmit={submit} className="flex flex-col gap-2">
-                <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="username" className="input"/>
-                <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="password" className="input"/>
-                <div className="flex gap-2">
-                    <button className="btn btn-primary" type="submit">Login</button>
-                </div>
+        <div
+            className="profile-card"
+            style={{
+                maxWidth: "650px",      // bigger login card
+                width: "92%",
+                margin: "120px auto",   // lower and centered
+                padding: "3rem 3rem",   // bigger padding
+                borderRadius: "1rem",
+            }}
+        >
+            <h3
+                className="profile-section-title"
+                style={{ fontSize: "2rem", marginBottom: "2rem" }}
+            >
+                Login
+            </h3>
+
+            {err && (
+                <p
+                    className="text-red"
+                    style={{ fontSize: "1.1rem", marginBottom: "1rem" }}
+                >
+                    {err}
+                </p>
+            )}
+
+            <form onSubmit={submit} className="flex flex-col" style={{ gap: "1.5rem" }}>
+                <input
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="username"
+                    className="profile-input"
+                    style={{
+                        fontSize: "1.2rem",
+                        padding: "1rem",
+                        height: "55px",
+                    }}
+                />
+
+                <input
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    type="password"
+                    placeholder="password"
+                    className="profile-input"
+                    style={{
+                        fontSize: "1.2rem",
+                        padding: "1rem",
+                        height: "55px",
+                    }}
+                />
+
+                <button
+                    type="submit"
+                    className="profile-save-btn"
+                    style={{
+                        fontSize: "1.2rem",
+                        padding: "0.9rem 1.4rem",
+                        width: "150px",
+                        marginTop: "0.5rem"
+                    }}
+                >
+                    Login
+                </button>
             </form>
         </div>
     );

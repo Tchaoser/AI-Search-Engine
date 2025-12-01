@@ -422,3 +422,131 @@ body {
     border: none;
     cursor: pointer;
 }
+/* ======================================================== */
+/* ===============  SETTINGS PAGE STYLING  ================ */
+/* ======================================================== */
+
+/* Page layout */
+.settings-page {
+    margin-top: 2.5rem;
+}
+
+.settings-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #123C73;
+    margin-bottom: 0.25rem;
+}
+
+.settings-subtext {
+    color: #4b5563;
+    margin-bottom: 2rem;
+}
+
+/* White card similar to profile-card */
+.settings-card {
+    background: white;
+    padding: 1.6rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    margin-bottom: 2rem;
+}
+
+.settings-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.settings-label {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #123C73;
+}
+
+.settings-description {
+    font-size: 0.95rem;
+    color: #4b5563;
+    margin-top: 0.3rem;
+}
+
+/* Toggle switch styling — matches wireframe + teal highlight */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 28px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #cbd5e1;
+    transition: 0.4s;
+    border-radius: 28px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.4s;
+    border-radius: 50%;
+}
+
+/* When toggle is ON */
+input:checked + .slider {
+    background-color: #26bbaa; /* same teal as active nav pill */
+}
+
+input:checked + .slider:before {
+    transform: translateX(24px);
+}
+/* ============================= */
+/* SETTINGS PAGE TOGGLE          */
+/* ============================= */
+
+.settings-switch {
+    width: 48px;
+    height: 26px;
+    background: #ccc; /* off state */
+    border-radius: 20px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.25s ease;
+    display: flex;
+    align-items: center;
+    padding: 3px;
+}
+
+.settings-switch.on {
+    background: #26bbaa; /* same color as the Profile tab pill */
+}
+
+.settings-switch-knob {
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.25s ease;
+    pointer-events: none; /* prevents click blocking */
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.settings-switch.on .settings-switch-knob {
+    transform: translateX(22px); /* slides knob to right */
+}

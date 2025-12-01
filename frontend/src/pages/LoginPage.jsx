@@ -38,10 +38,10 @@ export default function LoginPage() {
         <div
             className="profile-card"
             style={{
-                maxWidth: "650px",      // bigger login card
+                maxWidth: "650px", 
                 width: "92%",
-                margin: "120px auto",   // lower and centered
-                padding: "3rem 3rem",   // bigger padding
+                margin: "120px auto",
+                padding: "3rem 3rem", 
                 borderRadius: "1rem",
             }}
         >

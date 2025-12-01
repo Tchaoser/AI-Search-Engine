@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-export default function SearchBar({ onSearch }) {
+export default function SearchBar({ onSearch, hero }) {
     const [query, setQuery] = useState("");
 
     const handleSubmit = (e) => {
@@ -10,22 +10,40 @@ export default function SearchBar({ onSearch }) {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-2" role="search">
-            <label htmlFor="search-input" className="sr-only">Search</label>
-            <input
-                id="search-input"
-                type="search"
-                autoComplete="off"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Enter your search query..."
-                className="input flex-1"
-                aria-label="Search query"
-            />
-            <button
-                type="submit"
-                className="btn btn-primary btn-focus w-full"
-            >
+        <form
+            onSubmit={handleSubmit}
+            className={`searchbar-wrapper ${hero ? "hero" : ""}`}
+            role="search"
+        >
+            {/* Outer container for the white bar */}
+            <div className={`searchbar-container ${hero ? "hero" : ""}`}>
+                <span className="searchbar-icon">
+                    <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#008C8C"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    >
+                        <circle cx="11" cy="11" r="7"></circle>
+                        <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+                    </svg>
+                </span>
+
+                <input
+                    type="search"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search anything..."
+                    className="searchbar-input-real"
+                />
+            </div>
+
+            {/* Search button OUTSIDE the bar */}
+            <button type="submit" className="searchbar-btn">
                 Search
             </button>
         </form>

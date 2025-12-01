@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 export default function SettingsPage() {
     const [useEnhancedQuery, setUseEnhancedQuery] = useState(true);
 
-    // Load setting from localStorage on mount
+    // Load from localStorage on mount
     useEffect(() => {
         const saved = localStorage.getItem("useEnhancedQuery");
         if (saved !== null) {
@@ -11,37 +11,43 @@ export default function SettingsPage() {
         }
     }, []);
 
-    // Save setting to localStorage when it changes
-    const handleToggleEnhancedQuery = (e) => {
-        const checked = e.target.checked;
-        setUseEnhancedQuery(checked);
-        localStorage.setItem("useEnhancedQuery", JSON.stringify(checked));
-    };
-
     return (
-        <div>
-            <h2 className="text-2xl font-semibold mb-3">Settings</h2>
-            <p className="text-gray-600">Here users will manage privacy, performance, and personalization options.</p>
+        <div className="container settings-page">
 
-            <div className="mt-6 p-4 border border-gray-300 rounded-lg">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <label htmlFor="enhanced-query-toggle" className="text-lg font-medium">
+            <h2 className="settings-title">Settings</h2>
+            <p className="settings-subtext">
+                Here users will manage privacy, performance, and personalization options.
+            </p>
+
+            {/* SETTINGS CARD */}
+            <div className="settings-card">
+
+                <div className="settings-row">
+                    <div className="settings-left">
+                        <label className="settings-label">
                             Use Enhanced Query
                         </label>
-                        <p className="text-sm text-gray-600 mt-1">
-                            Enable semantic query expansion to improve search results
+
+                        <p className="settings-description">
+                            Enable semantic query enhancement to improve search results
                         </p>
                     </div>
-                    <input
-                        id="enhanced-query-toggle"
-                        type="checkbox"
-                        checked={useEnhancedQuery}
-                        onChange={handleToggleEnhancedQuery}
-                        className="w-6 h-6 cursor-pointer"
-                    />
+
+                    {/* TOGGLE */}
+                    <div
+                        className={`settings-switch ${useEnhancedQuery ? "on" : ""}`}
+                        onClick={() => {
+                            const newVal = !useEnhancedQuery;
+                            setUseEnhancedQuery(newVal);
+                            localStorage.setItem("useEnhancedQuery", JSON.stringify(newVal));
+                        }}
+                    >
+                        <div className="settings-switch-knob"></div>
+                    </div>
                 </div>
+
             </div>
+
         </div>
     );
 }

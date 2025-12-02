@@ -65,6 +65,12 @@ def log_feedback(user_id: str, query_id: str, result_url: str, rank: int, is_pos
     action_type = "positive_feedback" if is_positive else "negative_feedback"
 
     try:
+        interactions_col.delete_many({
+            "user_id": user_id,
+            "clicked_url": result_url,
+            "action_type": {"$in": ["positive_feedback", "negative_feedback"]},
+        })
+
         doc = make_interaction_doc(
             user_id=user_id,
             query_id=query_id,

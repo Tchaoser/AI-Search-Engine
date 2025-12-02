@@ -120,7 +120,7 @@ async def log_feedback_endpoint(
     Record explicit relevance feedback for a specific search result.
 
     This is stored in the interactions collection as:
-      action_type = "positive_feedback" if is_relevant else "negative_feedback"
+      action_type = "positive_feedback" if is_relevant  else "negative_feedback"
     """
     effective_user = (
         auth_user

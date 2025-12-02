@@ -24,6 +24,7 @@ export default function SearchResults({ results, query_id, searchTerm, loading }
     if (!results || results.length === 0) return null;
 
     const handleClick = (r, index) => {
+        if (!query_id) return; // guard so weird things are not sent to backend
         logClick({
             user_id: effectiveUser,
             query_id,
@@ -33,11 +34,11 @@ export default function SearchResults({ results, query_id, searchTerm, loading }
     };
 
     const handleRating = (r, index, relevance) => {
-        if (!query_id) return;
+        if (!query_id) return; // guard so weird things are not sent to backend
 
         const key = r.link || String(index);
 
-        //Toggle local ratings
+        // Toggle local ratings
         setRatings((prev) => {
             const current = prev[key];
             const next = current === relevance ? null : relevance;
@@ -62,30 +63,57 @@ export default function SearchResults({ results, query_id, searchTerm, loading }
 
     return (
         <div className="results-container">
-            {results.map((r, i) => (
-                <div key={i} className="result-card">
-                    <div className="result-left">
-                        <a
-                            href={r.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="result-title"
-                            onClick={() => handleClick(r, i)}
-                        >
-                            {r.title || r.link}
-                        </a>
+            {results.map((r, i) => {
+                const key = r.link || String(i);
+                const rating = ratings[key]; // "relevant" | "not_relevant" | undefined
 
-                        {r.snippet && (
-                            <p className="result-snippet">{r.snippet}</p>
-                        )}
-                    </div>
+                return (
+                    <div key={i} className="result-card">
+                        <div className="result-left">
+                            <a
+                                href={r.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="result-title"
+                                onClick={() => handleClick(r, i)}
+                            >
+                                {r.title || r.link}
+                            </a>
 
-                    <div className="result-actions">
-                        <button className="rate-btn relevant">Relevant</button>
-                        <button className="rate-btn not-relevant">Not Relevant</button>
+                            {r.snippet && (
+                                <p className="result-snippet">{r.snippet}</p>
+                            )}
+                        </div>
+
+                        <div className="result-actions">
+                            <button
+                                className={
+                                    "rate-btn relevant" +
+                                    (rating === "relevant" ? " active" : "")
+                                }
+                                type="button"
+                                onClick={() => handleRating(r, i, "relevant")}
+                            >
+                                Relevant
+                            </button>
+                            <button
+                                className={
+                                    "rate-btn not-relevant" +
+                                    (rating === "not_relevant" ? " active" : "")
+                                }
+                                type="button"
+                                onClick={() => handleRating(r, i, "not_relevant")}
+                            >
+                                Not Relevant
+                            </button>
+                        </div>
                     </div>
-                </div>
-            ))}
+                );
+            })}
         </div>
     );
+
+
+
+
 }

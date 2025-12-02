@@ -315,6 +315,22 @@ body {
     background: #ffecec;
 }
 
+/* ACTIVE STATE – this is your “visual confirmation” */
+.rate-btn.active {
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.rate-btn.relevant.active {
+    background: #16a34a;     /* green-ish */
+    border-color: #16a34a;
+}
+
+.rate-btn.not-relevant.active {
+    background: #dc2626;     /* red-ish */
+    border-color: #dc2626;
+}
+
 /* ============================= */
 /* UTILITIES                     */
 /* ============================= */

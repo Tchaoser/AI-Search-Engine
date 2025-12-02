@@ -28,14 +28,12 @@ def log_query(user_id: str, raw_text: str, enhanced_text: str = None):
         raise
 
 
-def log_interaction(user_id: str, query_id: str, clicked_url: str, rank: int, action_type: str = "click"):
+def log_interaction(user_id: str, query_id: str, clicked_url: str, rank: int):
     """
     Log a user interaction (click) in MongoDB:
-      - Clicks:          action_type="click"
-      - :       action_type="feedback_positive"
-      - –:       action_type="feedback_negative"
     """
     try:
+        #default action_type is "click" in make_interactions_doc
         doc = make_interaction_doc(user_id, query_id, clicked_url, rank)
         interactions_col.insert_one(doc)
         logger.debug("Interaction document inserted", extra={

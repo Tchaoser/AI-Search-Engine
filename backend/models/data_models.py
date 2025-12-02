@@ -13,7 +13,7 @@ def make_query_doc(user_id: str, raw_text: str, enhanced_text: str = None):
         "timestamp": datetime.utcnow().isoformat(),
     }
 
-def make_interaction_doc(user_id: str, query_id: str, clicked_url: str, rank: int):
+def make_interaction_doc(user_id: str, query_id: str, clicked_url: str, rank: int, action_type: str = "click"):
     """
     Prepare an interaction document for insertion into MongoDB.
     """
@@ -24,7 +24,7 @@ def make_interaction_doc(user_id: str, query_id: str, clicked_url: str, rank: in
         "clicked_url": clicked_url,
         "rank": rank,
         "timestamp": datetime.utcnow().isoformat(),
-        "action_type": "click",
+        "action_type": action_type, #can be click (default), positive_feedback or negative_feedback
     }
 
 def make_user_profile_doc(user_id, interests, query_history, click_history, explicit_interests=None):

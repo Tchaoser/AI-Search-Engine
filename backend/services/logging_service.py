@@ -28,9 +28,12 @@ def log_query(user_id: str, raw_text: str, enhanced_text: str = None):
         raise
 
 
-def log_interaction(user_id: str, query_id: str, clicked_url: str, rank: int):
+def log_interaction(user_id: str, query_id: str, clicked_url: str, rank: int, action_type: str = "click"):
     """
-    Log a user interaction (click) in MongoDB.
+    Log a user interaction (click) in MongoDB:
+      - Clicks:          action_type="click"
+      - :       action_type="feedback_positive"
+      - –:       action_type="feedback_negative"
     """
     try:
         doc = make_interaction_doc(user_id, query_id, clicked_url, rank)
@@ -50,3 +53,39 @@ def log_interaction(user_id: str, query_id: str, clicked_url: str, rank: int):
         }, exc_info=True)
         raise
 
+
+def log_feedback(user_id: str, query_id: str, result_url: str, rank: int, is_positive: bool):
+    """
+    Log explicit relevance feedback in MongoDB.
+
+    action_type:
+      - "positive_feedback" when is_positive is True
+      - "negative_feedback" when is_positive is False
+    """
+    action_type = "positive_feedback" if is_positive else "negative_feedback"
+
+    try:
+        doc = make_interaction_doc(
+            user_id=user_id,
+            query_id=query_id,
+            clicked_url=result_url,
+            rank=rank,
+            action_type=action_type,
+        )
+        interactions_col.insert_one(doc)
+        logger.debug("Feedback document inserted", extra={
+            "user_id": user_id,
+            "feedback_id": doc["_id"],
+            "query_id": query_id,
+            "rank": rank,
+            "action_type": action_type,
+        })
+        return doc["_id"]
+    except Exception as e:
+        logger.error("Failed to log feedback", extra={
+            "user_id": user_id,
+            "query_id": query_id,
+            "action_type": action_type,
+            "error": str(e),
+        }, exc_info=True)
+        raise

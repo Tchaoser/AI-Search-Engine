@@ -35,3 +35,25 @@ export async function logClick({ user_id, query_id, clicked_url, rank }) {
         throw err;
     }
 }
+
+export async function logFeedback({ user_id, query_id, result_url, rank, is_relevant }) {
+    const url = `${API_BASE}/feedback`;
+    const headers = { "Content-Type": "application/json", ...getAuthHeaders() };
+    // If you pass user_id in the body it will be ignored if there's a logged-in users.
+    try {
+        //basically identical to logClick
+        await axios.post(
+            url,
+            { user_id, query_id, result_url, rank, is_relevant },
+            { headers },
+        );
+    } catch (err) {
+        if (err?.response?.status === 401) {
+            clearCurrentUser();
+            window.location.href = "/login";
+            return Promise.reject(new Error("Unauthorized: token expired or invalid"));
+        }
+        throw err;
+    }
+}
+

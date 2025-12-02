@@ -1,7 +1,7 @@
 import time
-from fastapi import APIRouter, Query, Body, Depends
+from fastapi import APIRouter, Query, Body, Depends, HTTPException
 from services.search_service import search
-from services.logging_service import log_query, log_interaction
+from services.logging_service import log_query, log_interaction, log_feedback
 from services.semantic_expansion import expand_query
 from services.logger import AppLogger
 from api.utils import get_user_id_from_auth
@@ -105,4 +105,46 @@ async def log_click(
     return {
         "interaction_id": interaction_id,
         "status": "logged"
+    }
+
+@router.post("/feedback")
+async def log_feedback_endpoint(
+        user_id: str = Body(None),
+        query_id: str = Body(...),
+        result_url: str = Body(...),
+        rank: int = Body(...),
+        is_relevant: bool = Body(...),
+        auth_user: str = Depends(get_user_id_from_auth),
+):
+    """
+    Record explicit relevance feedback for a specific search result.
+
+    This is stored in the interactions collection as:
+      action_type = "positive_feedback" if is_relevant  else "negative_feedback"
+    """
+    effective_user = (
+        auth_user
+        if auth_user and auth_user != "guest"
+        else (user_id or "guest")
+    )
+
+    logger.info("Logging relevance feedback", extra={
+        "user_id": effective_user,
+        "query_id": query_id,
+        "result_url": result_url,
+        "rank": rank,
+        "is_relevant": is_relevant,
+    })
+
+    feedback_id = log_feedback(
+        effective_user,
+        query_id,
+        result_url,
+        rank,
+        is_positive=is_relevant,
+    )
+
+    return {
+        "feedback_id": feedback_id,
+        "status": "logged",
     }

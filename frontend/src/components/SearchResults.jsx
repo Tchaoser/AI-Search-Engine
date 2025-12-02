@@ -1,9 +1,16 @@
-import React from "react";
-import { logClick } from "../api/search.js";
+import React, { useState, useEffect } from "react";
+import { logClick, logFeedback } from "../api/search.js";
 import { getCurrentUserId } from "../auth/auth.js";
 
 export default function SearchResults({ results, query_id, searchTerm, loading }) {
     const effectiveUser = getCurrentUserId();
+
+    const [ratings, setRatings] = useState({});
+
+    // Clear ratings when a new query_id comes in (new search)
+    useEffect(() => {
+        setRatings({});
+    }, [query_id]);
 
     if (!loading && (!results || results.length === 0)) {
         const term = (searchTerm || "").trim();
@@ -23,6 +30,34 @@ export default function SearchResults({ results, query_id, searchTerm, loading }
             clicked_url: r.link,
             rank: index + 1
         }).catch(err => console.error("Failed to log click:", err));
+    };
+
+    const handleRating = (r, index, relevance) => {
+        if (!query_id) return;
+
+        const key = r.link || String(index);
+
+        //Toggle local ratings
+        setRatings((prev) => {
+            const current = prev[key];
+            const next = current === relevance ? null : relevance;
+            if (!next) {
+                const clone = { ...prev };
+                delete clone[key];
+                return clone;
+            }
+            return { ...prev, [key]: next };
+        });
+
+        const is_relevant = relevance === "relevant";
+
+        logFeedback({
+            user_id: effectiveUser,
+            query_id,
+            result_url: r.link,
+            rank: index + 1,
+            is_relevant,
+        }).catch((err) => console.error("Failed to log feedback:", err));
     };
 
     return (

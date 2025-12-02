@@ -39,7 +39,7 @@ export async function logClick({ user_id, query_id, clicked_url, rank }) {
 export async function logFeedback({ user_id, query_id, result_url, rank, is_relevant }) {
     const url = `${API_BASE}/feedback`;
     const headers = { "Content-Type": "application/json", ...getAuthHeaders() };
-    // If you pass user_id in the body it will be ignored if there's a logged-in user .
+    // If you pass user_id in the body it will be ignored if there's a logged-in users.
     try {
         //basically identical to logClick
         await axios.post(

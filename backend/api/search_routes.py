@@ -52,7 +52,7 @@ async def search_endpoint(
         "query_id": query_id
     })
 
-    # Perform search using whichever query is active, pass user_id for personalization 
+    # Perform search using whichever query is active, pass user_id for personalization
     results = search(enhanced, user_id=user_id)
     elapsed_ms = round((time.time() - start_time) * 1000, 2)
     logger.info("Search completed", extra={

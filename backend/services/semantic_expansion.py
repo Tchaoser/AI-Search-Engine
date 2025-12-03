@@ -27,6 +27,7 @@ import re
 from typing import Dict, List, Optional, Tuple
 
 import httpx
+import unicodedata
 
 from services.query_cache import query_cache
 from services.db import user_profiles_col
@@ -249,6 +250,26 @@ def _format_personalization_snippet(explicit: List[str], implicit: List[str]) ->
         )
     return snippet
 
+def _strip_wrapping_quotes(text: str) -> str:
+    """
+    Remove leading/trailing straight or curly quotes ONLY if the entire
+    string is wrapped by them. Internal quotes are preserved.
+    """
+    if not text or len(text) < 2:
+        return text
+
+    pairs = [
+        ('"', '"'),
+        ('“', '”'),
+        ('‘', '’'),
+    ]
+
+    for left, right in pairs:
+        if text.startswith(left) and text.endswith(right):
+            return text[1:-1].strip()
+
+    return text
+
 
 
 # -----------------------
@@ -332,15 +353,38 @@ async def expand_query(seed: str, user_id: Optional[str] = None) -> str:
         "system": system_prompt,
         "prompt": seed,
     }
+
     try:
         async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post(f"{OLLAMA_URL.rstrip('/')}/api/generate", json=payload)
+            resp = await client.post(
+                f"{OLLAMA_URL.rstrip('/')}/api/generate",
+                json=payload
+            )
         resp.raise_for_status()
+
         raw = (resp.json().get("response") or "").strip()
-        expanded = " ".join(raw.split()) or seed
-        logger.info("Expanded query for seed='%s' -> '%s'", seed, expanded)
+
+        # collapse whitespace first
+        collapsed = " ".join(raw.split()) or seed
+
+        # normalize to NFC for characters like é
+        normalized = unicodedata.normalize("NFC", collapsed)
+
+        # remove wrapping quotes if present
+        stripped = _strip_wrapping_quotes(normalized)
+
+        logger.info(
+            "Expanded query for seed='%s' -> '%s' (repr=%s)",
+            seed, stripped, repr(stripped)
+        )
+
+        expanded = stripped
+
     except Exception as e:
-        logger.warning("Query expansion failed, using original seed='%s', error=%s", seed, e)
+        logger.warning(
+            "Query expansion failed, using original seed='%s', error=%s",
+            seed, e
+        )
         expanded = seed
 
     # 4) Cache result (even if identical to seed)

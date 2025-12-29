@@ -225,6 +225,40 @@ async def remove_implicit_exclusion(
     profile = build_user_profile(effective_user)
     return profile
 
+@router.put("/profiles/implicit/upgrade")
+async def upgrade_implicit_interest(
+        user_id: str = Body(None),
+        keyword: str = Body(...),
+        auth_user: str = Depends(get_user_id_from_auth)
+):
+    if not keyword:
+        raise HTTPException(status_code=400, detail="keyword required")
+
+    effective_user = get_effective_user(auth_user, user_id)
+
+    # Load persisted profile
+    profile = user_profiles_col.find_one({"user_id": effective_user}) or {
+        "user_id": effective_user
+    }
+
+    # Promote to explicit (also removes from implicit + exclusions)
+    promote_to_explicit(profile, keyword, weight=1.0)
+
+    # Persist changes
+    user_profiles_col.update_one(
+        {"user_id": effective_user},
+        {"$set": profile},
+        upsert=True
+    )
+
+    logger.info("Implicit interest upgraded to explicit", extra={
+        "user_id": effective_user,
+        "keyword": keyword
+    })
+
+    profile = build_user_profile(effective_user)
+    return profile
+
 
 # --- Clear endpoints ---
 

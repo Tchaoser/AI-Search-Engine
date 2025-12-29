@@ -120,6 +120,33 @@ export default function UserProfilePage() {
         }
     };
 
+    const upgradeImplicitInterest = async (keyword) => {
+        setLoadingImplicitRemove(true);
+        try {
+            const res = await fetch(`${API_URL}/profiles/implicit/upgrade`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_id: userId, keyword })
+            });
+
+            const data = await res.json();
+
+            // Update explicit interests
+            setExplicitInterests(data.explicit_interests || []);
+
+            // Update implicit interests
+            const sortedImplicit = Object.entries(data.implicit_interests || {})
+                .sort(([, a], [, b]) => b - a)
+                .map(([k, w]) => ({ keyword: k, weight: w }));
+
+            setImplicitInterests(sortedImplicit.slice(0, IMPLICIT_SHOW_N));
+            setImplicitExclusions(data.implicit_exclusions || []);
+        } finally {
+            setLoadingImplicitRemove(false);
+        }
+    };
+
+
     const saveWeights = async () => {
         setLoadingSave(true);
         try {
@@ -222,7 +249,13 @@ export default function UserProfilePage() {
                                     ×
                                 </button>
 
-                                <button className="profile-upgrade-btn">Upgrade</button>
+                                <button
+                                    className="profile-upgrade-btn"
+                                    onClick={() => upgradeImplicitInterest(keyword)}
+                                    disabled={loadingImplicitRemove}
+                                >
+                                    Upgrade
+                                </button>
                             </div>
                         ))
                     )}

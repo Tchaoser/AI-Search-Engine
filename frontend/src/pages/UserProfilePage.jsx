@@ -9,7 +9,8 @@ const IMPLICIT_SHOW_N = 10;
 export default function UserProfilePage() {
     const { notify } = useNotifications();
 
-    const [userId] = useState(getCurrentUserId());
+    const [userId, setUserId] = useState(getCurrentUserId());
+
     const [explicitInterests, setExplicitInterests] = useState([]);
     const [implicitInterests, setImplicitInterests] = useState([]);
     const [implicitExclusions, setImplicitExclusions] = useState([]);
@@ -17,12 +18,37 @@ export default function UserProfilePage() {
 
     const [loadingSave, setLoadingSave] = useState(false);
     const [loadingImplicitRemove, setLoadingImplicitRemove] = useState(false);
-    const [loadingClearExplicit, setLoadingClearExplicit] = useState(false);
-    const [loadingClearImplicit, setLoadingClearImplicit] = useState(false);
 
+    // Detect auth user changes (login/logout) and clear the user-scoped cache
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const currentUserId = getCurrentUserId();
+
+            // Ignore guest state
+            if (currentUserId === "guest") {
+                return;
+            }
+
+            if (currentUserId !== userId) {
+                setUserId(currentUserId);
+
+                // Clear user-scoped cache ONLY on real account change
+                setExplicitInterests([]);
+                setImplicitInterests([]);
+                setImplicitExclusions([]);
+            }
+        }, 500);
+
+        return () => clearInterval(interval);
+    }, [userId]);
+
+
+    //Load profile whenever userId changes
     const loadProfile = useCallback(() => {
+        if (!userId) return;
+
         fetch(`${API_URL}/profiles/${userId}`)
-            .then(res => res.ok ? res.json() : Promise.reject("Failed to load profile"))
+            .then(res => res.ok ? res.json() : Promise.reject())
             .then(profile => {
                 setExplicitInterests(profile.explicit_interests || []);
 
@@ -34,14 +60,21 @@ export default function UserProfilePage() {
                 setImplicitExclusions(profile.implicit_exclusions || []);
             })
             .catch(() => {
-                notify({ type: "error", title: "Load failed", message: "Could not load profile" });
+                notify({
+                    type: "error",
+                    title: "Load failed",
+                    message: "Could not load profile"
+                });
+
                 setExplicitInterests([]);
                 setImplicitInterests([]);
                 setImplicitExclusions([]);
             });
     }, [userId, notify]);
 
-    useEffect(() => loadProfile(), [loadProfile]);
+    useEffect(() => {
+        loadProfile();
+    }, [loadProfile]);
 
     const addInterest = () => {
         const trimmed = newInterest.trim();

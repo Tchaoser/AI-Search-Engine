@@ -4,7 +4,6 @@ import { getCurrentUserId } from "../auth/auth.js";
 
 export default function SearchResults({ results, query_id, searchTerm, loading }) {
     const effectiveUser = getCurrentUserId();
-
     const [ratings, setRatings] = useState({});
 
     // Clear ratings when a new query_id comes in (new search)
@@ -24,7 +23,7 @@ export default function SearchResults({ results, query_id, searchTerm, loading }
     if (!results || results.length === 0) return null;
 
     const handleClick = (r, index) => {
-        if (!query_id) return; // guard so weird things are not sent to backend
+        if (!query_id) return;
         logClick({
             user_id: effectiveUser,
             query_id,
@@ -34,11 +33,10 @@ export default function SearchResults({ results, query_id, searchTerm, loading }
     };
 
     const handleRating = (r, index, relevance) => {
-        if (!query_id) return; // guard so weird things are not sent to backend
+        if (!query_id) return;
 
         const key = r.link || String(index);
 
-        // Toggle local ratings
         setRatings((prev) => {
             const current = prev[key];
             const next = current === relevance ? null : relevance;
@@ -65,31 +63,32 @@ export default function SearchResults({ results, query_id, searchTerm, loading }
         <div className="results-container">
             {results.map((r, i) => {
                 const key = r.link || String(i);
-                const rating = ratings[key]; // "relevant" | "not_relevant" | undefined
+                const rating = ratings[key];
 
                 return (
                     <div key={i} className="result-card">
-                        <div className="result-left">
-                            <a
-                                href={r.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="result-title"
-                                onClick={() => handleClick(r, i)}
-                            >
-                                {r.title || r.link}
-                            </a>
+                        <a
+                            href={r.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="result-title"
+                            onClick={() => handleClick(r, i)}
+                        >
+                            {r.title || r.link}
+                        </a>
 
-                            {r.snippet && (
-                                <p className="result-snippet">{r.snippet}</p>
-                            )}
-                        </div>
+                        {/* Show the URL under the title */}
+                        <span className="result-url">{r.link}</span>
+
+                        {r.snippet && (
+                            <p className="result-snippet">{r.snippet}</p>
+                        )}
 
                         <div className="result-actions">
                             <button
                                 className={
                                     "rate-btn relevant" +
-                                    (rating === "relevant" ? " active" : "")
+                                    (rating === "relevant" ? " selected" : "")
                                 }
                                 type="button"
                                 onClick={() => handleRating(r, i, "relevant")}
@@ -99,7 +98,7 @@ export default function SearchResults({ results, query_id, searchTerm, loading }
                             <button
                                 className={
                                     "rate-btn not-relevant" +
-                                    (rating === "not_relevant" ? " active" : "")
+                                    (rating === "not_relevant" ? " selected" : "")
                                 }
                                 type="button"
                                 onClick={() => handleRating(r, i, "not_relevant")}
@@ -112,8 +111,4 @@ export default function SearchResults({ results, query_id, searchTerm, loading }
             })}
         </div>
     );
-
-
-
-
 }

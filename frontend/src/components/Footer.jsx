@@ -2,10 +2,10 @@ import React from "react";
 
 export default function Footer() {
     return (
-        <div className="flex flex-col justify-between items-center text-sm gap-2 w-full">
+        <div className="footer w-full flex flex-col justify-center items-center gap-2 p-6">
             <div>© {new Date().getFullYear()} AI Search Dev</div>
             <div className="flex gap-4">
-                {/* TODO: consider adding Privacy, Terms links */}
+
             </div>
         </div>
     );

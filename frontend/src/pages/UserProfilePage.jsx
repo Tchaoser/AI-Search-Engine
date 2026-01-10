@@ -17,12 +17,10 @@ export default function UserProfilePage() {
 
     const [loadingSave, setLoadingSave] = useState(false);
     const [loadingImplicitRemove, setLoadingImplicitRemove] = useState(false);
-    const [loadingClearExplicit, setLoadingClearExplicit] = useState(false);
-    const [loadingClearImplicit, setLoadingClearImplicit] = useState(false);
 
     const loadProfile = useCallback(() => {
         fetch(`${API_URL}/profiles/${userId}`)
-            .then(res => res.ok ? res.json() : Promise.reject("Failed to load profile"))
+            .then(res => res.ok ? res.json() : Promise.reject())
             .then(profile => {
                 setExplicitInterests(profile.explicit_interests || []);
 
@@ -34,10 +32,11 @@ export default function UserProfilePage() {
                 setImplicitExclusions(profile.implicit_exclusions || []);
             })
             .catch(() => {
-                notify({ type: "error", title: "Load failed", message: "Could not load profile" });
-                setExplicitInterests([]);
-                setImplicitInterests([]);
-                setImplicitExclusions([]);
+                notify({
+                    type: "error",
+                    title: "Load failed",
+                    message: "Could not load profile"
+                });
             });
     }, [userId, notify]);
 
@@ -52,111 +51,18 @@ export default function UserProfilePage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ user_id: userId, keyword: trimmed, weight: 1.0 })
         })
-            .then(res => res.json().then(data => ({ ok: res.ok, data })))
-            .then(({ ok, data }) => {
-                if (!ok) throw new Error(data.detail || "Add failed");
-                setExplicitInterests(data.explicit_interests || []);
-                loadProfile();
-            })
-            .catch(err => notify({ type: "error", title: "Add failed", message: err.message }))
+            .then(() => loadProfile())
             .finally(() => setNewInterest(""));
     };
-
-    const removeExplicitInterest = (keyword) => {
-        fetch(`${API_URL}/profiles/explicit/remove`, {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: userId, keyword })
-        })
-            .then(res => res.json().then(data => ({ ok: res.ok, data })))
-            .then(({ ok, data }) => {
-                if (!ok) throw new Error(data.detail || "Remove failed");
-                setExplicitInterests(data.explicit_interests || []);
-                loadProfile();
-            })
-            .catch(err =>
-                notify({ type: "error", title: "Remove failed", message: err.message })
-            );
-    };
-
-    const removeImplicitInterest = async (keyword) => {
-        setLoadingImplicitRemove(true);
-        try {
-            const res = await fetch(`${API_URL}/profiles/implicit/remove`, {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ user_id: userId, keyword })
-            });
-            const data = await res.json();
-            const sortedImplicit = Object.entries(data.implicit_interests || {})
-                .sort(([, a], [, b]) => b - a)
-                .map(([k, w]) => ({ keyword: k, weight: w }));
-
-            setImplicitInterests(sortedImplicit.slice(0, IMPLICIT_SHOW_N));
-            setImplicitExclusions(data.implicit_exclusions || []);
-        } finally {
-            setLoadingImplicitRemove(false);
-        }
-    };
-
-    const undoImplicitExclusion = async (keyword) => {
-        setLoadingImplicitRemove(true);
-        try {
-            const res = await fetch(`${API_URL}/profiles/implicit/exclusion/remove`, {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ user_id: userId, keyword })
-            });
-            const data = await res.json();
-
-            const sortedImplicit = Object.entries(data.implicit_interests || {})
-                .sort(([, a], [, b]) => b - a)
-                .map(([k, w]) => ({ keyword: k, weight: w }));
-
-            setImplicitInterests(sortedImplicit.slice(0, IMPLICIT_SHOW_N));
-            setImplicitExclusions(data.implicit_exclusions || []);
-        } finally {
-            setLoadingImplicitRemove(false);
-        }
-    };
-
-    const upgradeImplicitInterest = async (keyword) => {
-        setLoadingImplicitRemove(true);
-        try {
-            const res = await fetch(`${API_URL}/profiles/implicit/upgrade`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ user_id: userId, keyword })
-            });
-
-            const data = await res.json();
-
-            // Update explicit interests
-            setExplicitInterests(data.explicit_interests || []);
-
-            // Update implicit interests
-            const sortedImplicit = Object.entries(data.implicit_interests || {})
-                .sort(([, a], [, b]) => b - a)
-                .map(([k, w]) => ({ keyword: k, weight: w }));
-
-            setImplicitInterests(sortedImplicit.slice(0, IMPLICIT_SHOW_N));
-            setImplicitExclusions(data.implicit_exclusions || []);
-        } finally {
-            setLoadingImplicitRemove(false);
-        }
-    };
-
 
     const saveWeights = async () => {
         setLoadingSave(true);
         try {
-            const res = await fetch(`${API_URL}/profiles/explicit/bulk_update`, {
+            await fetch(`${API_URL}/profiles/explicit/bulk_update`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ user_id: userId, updates: explicitInterests })
             });
-            const data = await res.json();
-            setExplicitInterests(data.explicit_interests || []);
             loadProfile();
         } finally {
             setLoadingSave(false);
@@ -166,11 +72,19 @@ export default function UserProfilePage() {
     return (
         <div className="profile-page container">
 
-            {/* ================= EXPLICIT INTERESTS ================ */}
+            {/* Label for accessibility */}
+            <h1 className="visually-hidden">User Profile</h1>
+
+            {/* ================= EXPLICIT INTERESTS ================= */}
             <section className="profile-card">
                 <h3 className="profile-section-title">Explicit Interest</h3>
 
+                <label htmlFor="new-interest" className="visually-hidden">
+                    Add a new explicit interest
+                </label>
+
                 <input
+                    id="new-interest"
                     type="text"
                     className="profile-input"
                     placeholder="Add new interest"
@@ -178,44 +92,61 @@ export default function UserProfilePage() {
                     onChange={e => setNewInterest(e.target.value)}
                 />
 
-                <button onClick={addInterest} className="profile-add-btn">Add</button>
+                <button onClick={addInterest} className="profile-add-btn">
+                    Add
+                </button>
 
                 <div className="profile-list">
-                    {explicitInterests.length === 0 ? (
-                        <p className="profile-empty-msg">No new interests</p>
-                    ) : (
-                        explicitInterests.map(({ keyword, weight }) => (
-                            <div className="profile-row" key={keyword}>
-                                <span className="profile-keyword">{keyword}</span>
+                    {explicitInterests.map(({ keyword, weight }) => (
+                        <div className="profile-row" key={keyword}>
+                            <span className="profile-keyword">{keyword}</span>
 
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="1"
-                                    step="0.1"
-                                    value={weight}
-                                    className="profile-slider"
-                                    onChange={(e) => {
-                                        const w = parseFloat(e.target.value);
-                                        setExplicitInterests(prev =>
-                                            prev.map(i =>
-                                                i.keyword === keyword ? { ...i, weight: w } : i
-                                            )
-                                        );
-                                    }}
-                                />
+                            <label
+                                htmlFor={`weight-${keyword}`}
+                                className="visually-hidden"
+                            >
+                                Interest weight for {keyword}
+                            </label>
 
-                                <span className="profile-score">{weight.toFixed(1)}</span>
+                            <input
+                                id={`weight-${keyword}`}
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.1"
+                                value={weight}
+                                className="profile-slider"
+                                onChange={(e) => {
+                                    const w = parseFloat(e.target.value);
+                                    setExplicitInterests(prev =>
+                                        prev.map(i =>
+                                            i.keyword === keyword
+                                                ? { ...i, weight: w }
+                                                : i
+                                        )
+                                    );
+                                }}
+                            />
 
-                                <button
-                                    className="profile-remove-btn"
-                                    onClick={() => removeExplicitInterest(keyword)}
-                                >
-                                    ×
-                                </button>
-                            </div>
-                        ))
-                    )}
+                            <span className="profile-score">
+                                {weight.toFixed(1)}
+                            </span>
+
+                            <button
+                                className="profile-remove-btn"
+                                aria-label={`Remove ${keyword} from explicit interests`}
+                                onClick={() => {
+                                    fetch(`${API_URL}/profiles/explicit/remove`, {
+                                        method: "DELETE",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ user_id: userId, keyword })
+                                    }).then(loadProfile);
+                                }}
+                            >
+                                ×
+                            </button>
+                        </div>
+                    ))}
                 </div>
 
                 <button
@@ -227,63 +158,74 @@ export default function UserProfilePage() {
                 </button>
             </section>
 
-            {/* ================= IMPLICIT INTERESTS ================ */}
+            {/* ================= IMPLICIT INTERESTS ================= */}
             <section className="profile-card">
                 <h3 className="profile-section-title">Implicit Interest</h3>
 
                 <div className="profile-list">
-                    {implicitInterests.length === 0 ? (
-                        <p className="profile-empty-msg">No implicit interests yet</p>
-                    ) : (
-                        implicitInterests.map(({ keyword, weight }) => (
-                            <div className="profile-row" key={keyword}>
-                                <span className="profile-keyword">{keyword}</span>
+                    {implicitInterests.map(({ keyword, weight }) => (
+                        <div className="profile-row" key={keyword}>
+                            <span className="profile-keyword">{keyword}</span>
+                            <span className="profile-score">{weight.toFixed(1)}</span>
 
-                                <span className="profile-score">{weight.toFixed(1)}</span>
+                            <button
+                                className="profile-remove-btn"
+                                aria-label={`Exclude ${keyword} from implicit interests`}
+                                disabled={loadingImplicitRemove}
+                                onClick={() => {
+                                    fetch(`${API_URL}/profiles/implicit/remove`, {
+                                        method: "DELETE",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ user_id: userId, keyword })
+                                    }).then(loadProfile);
+                                }}
+                            >
+                                ×
+                            </button>
 
-                                <button
-                                    className="profile-remove-btn"
-                                    onClick={() => removeImplicitInterest(keyword)}
-                                    disabled={loadingImplicitRemove}
-                                >
-                                    ×
-                                </button>
-
-                                <button
-                                    className="profile-upgrade-btn"
-                                    onClick={() => upgradeImplicitInterest(keyword)}
-                                    disabled={loadingImplicitRemove}
-                                >
-                                    Upgrade
-                                </button>
-                            </div>
-                        ))
-                    )}
+                            <button
+                                className="profile-upgrade-btn"
+                                aria-label={`Upgrade ${keyword} to explicit interest`}
+                                disabled={loadingImplicitRemove}
+                                onClick={() => {
+                                    fetch(`${API_URL}/profiles/implicit/upgrade`, {
+                                        method: "PUT",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ user_id: userId, keyword })
+                                    }).then(loadProfile);
+                                }}
+                            >
+                                Upgrade
+                            </button>
+                        </div>
+                    ))}
                 </div>
             </section>
 
-            {/* ================= IMPLICIT EXCLUSIONS ================ */}
+            {/* ================= IMPLICIT EXCLUSIONS ================= */}
             <section className="profile-card">
                 <h3 className="profile-section-title">Implicit Exclusions</h3>
 
                 <div className="profile-list">
-                    {implicitExclusions.length === 0 ? (
-                        <p className="profile-empty-msg">No implicit exclusions yet</p>
-                    ) : (
-                        implicitExclusions.map(keyword => (
-                            <div className="profile-row" key={keyword}>
-                                <span className="profile-keyword">{keyword}</span>
+                    {implicitExclusions.map(keyword => (
+                        <div className="profile-row" key={keyword}>
+                            <span className="profile-keyword">{keyword}</span>
 
-                                <button
-                                    className="profile-undo-btn"
-                                    onClick={() => undoImplicitExclusion(keyword)}
-                                    disabled={loadingImplicitRemove}
-                                >
-                                    Undo
-                                </button>
-                            </div>
-                        ))
-                    )}
+                            <button
+                                className="profile-undo-btn"
+                                aria-label={`Undo exclusion of ${keyword}`}
+                                onClick={() => {
+                                    fetch(`${API_URL}/profiles/implicit/exclusion/remove`, {
+                                        method: "DELETE",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ user_id: userId, keyword })
+                                    }).then(loadProfile);
+                                }}
+                            >
+                                Undo
+                            </button>
+                        </div>
+                    ))}
                 </div>
             </section>
 

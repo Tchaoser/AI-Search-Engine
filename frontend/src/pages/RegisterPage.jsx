@@ -28,89 +28,70 @@ export default function RegisterPage() {
     };
 
     return (
-        <div
-            className="profile-card"
-            style={{
-                maxWidth: "650px",
-                width: "92%",
-                margin: "120px auto",
-                padding: "3rem 3rem",
-                borderRadius: "1rem",
-            }}
-        >
-            <h3
-                className="profile-section-title"
-                style={{ fontSize: "2rem", marginBottom: "2rem" }}
-            >
-                Register
-            </h3>
+        <div className="register-page">
+            <div className="register-card">
+                <h1>Register</h1>
 
-            {msg?.error && (
-                <p className="text-red" style={{ fontSize: "1.1rem", marginBottom: "1rem" }}>
-                    {msg.error}
-                </p>
-            )}
+                {msg?.error && (
+                    <p className="text-red" style={{ marginBottom: "1rem" }}>
+                        {msg.error}
+                    </p>
+                )}
 
-            {msg?.success && (
-                <p
-                    className="text-green"
-                    style={{ fontSize: "1.1rem", marginBottom: "1rem", color: "#15803d" }}
-                >
-                    {msg.success}
-                </p>
-            )}
+                {msg?.success && (
+                    <p style={{ color: "#15803d", marginBottom: "1rem" }}>
+                        {msg.success}
+                    </p>
+                )}
 
-            <form onSubmit={submit} className="flex flex-col" style={{ gap: "1.5rem" }}>
-                <input
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="username"
-                    className="profile-input"
-                    style={{
-                        fontSize: "1.2rem",
-                        padding: "1rem",
-                        height: "55px",
-                    }}
-                />
+                <form onSubmit={submit}>
 
-                <input
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="email (optional)"
-                    className="profile-input"
-                    style={{
-                        fontSize: "1.2rem",
-                        padding: "1rem",
-                        height: "55px",
-                    }}
-                />
+                    {/* Username */}
+                    <label htmlFor="username" className="visually-hidden">
+                        Username
+                    </label>
+                    <input
+                        id="username"
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="Username"
+                        autoComplete="username"
+                        required
+                    />
 
-                <input
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    type="password"
-                    placeholder="password"
-                    className="profile-input"
-                    style={{
-                        fontSize: "1.2rem",
-                        padding: "1rem",
-                        height: "55px",
-                    }}
-                />
+                    {/* Email */}
+                    <label htmlFor="email" className="visually-hidden">
+                        Email address (optional)
+                    </label>
+                    <input
+                        id="email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Email (optional)"
+                        autoComplete="email"
+                    />
 
-                <button
-                    className="profile-save-btn"
-                    type="submit"
-                    style={{
-                        fontSize: "1.2rem",
-                        padding: "0.9rem 1.4rem",
-                        width: "150px",
-                        marginTop: "0.5rem",
-                    }}
-                >
-                    Register
-                </button>
-            </form>
+                    {/* Password */}
+                    <label htmlFor="password" className="visually-hidden">
+                        Password
+                    </label>
+                    <input
+                        id="password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Password"
+                        autoComplete="new-password"
+                        required
+                    />
+
+                    <button type="submit">
+                        Register
+                    </button>
+                </form>
+            </div>
         </div>
     );
 }

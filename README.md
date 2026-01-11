@@ -43,14 +43,22 @@ backend/
 │
 ├─ services/
 │  ├─ __init__.py                  # Marks `services` as a Python package
-│  ├─ logger.py                    # Centralized logging system (file + console, structured logs)
+│  ├─ auth_service.py              # Handles user creation, authentication, and JWT tokens
 │  ├─ db.py                        # MongoDB connection and collection handles
 │  ├─ google_api.py                # Google Custom Search API calls
-│  ├─ search_service.py            # Search pipeline (proxies to Google and logs queries/interactions)
-│  ├─ semantic_expansion.py        # Expands a user query into a richer one using an Ollama model.
-│  ├─ user_profile_service.py      # Aggregates queries/clicks and builds per-user interest profiles
-│  ├─ background_tasks.py         # Background thread to rebuild and maintain user profiles on a schedule
-│  └─ auth_service.py              # Handles user creation, authentication, and JWT tokens
+│  ├─ logger.py                    # Centralized logging system (file + console, structured logs)
+│  ├─ logging_service.py           # Persists queries, clicks, and feedback events to MongoDB
+│  ├─ query_cache.py               # In-memory TTL cache for semantic query expansions
+│  ├─ search_service.py            # Search pipeline (Google proxy, logging, expansion, caching)
+│  ├─ semantic_expansion.py        # Expands a user query into a richer one using an Ollama model
+│  └─ user_profile_service.py      # Aggregates queries/clicks and builds per-user interest profiles
+
+├─ background_tasks/
+│  ├─ __init__.py                  # Marks `background_tasks` as a Python package
+│  └─ profile_rebuild.py           # Periodic background thread that rebuilds user profiles on a schedule
+│
+├─ logs/
+│  └─ app.log                      # Application runtime logs (structured output from AppLogger)
 │
 ├─ scripts/
 │  ├─ __init__.py                  # Marks `scripts` as a Python package
@@ -78,6 +86,7 @@ frontend/
 │  │  ├─ SearchBar.jsx              # User input component for entering search queries
 │  │  ├─ SearchResults.jsx          # Displays formatted list of search results
 │  │  └─ Navbar.jsx                 # Navigation bar with links to Search, Profile, and Settings pages
+│  │  └─ Footer.jsx                 # Space for project metadata
 │  │
 │  ├─ notifications/
 │  │  ├─ NotificationProvider.jsx   # React Context provider & hook for notifications

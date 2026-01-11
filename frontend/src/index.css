@@ -609,9 +609,18 @@ body {
 .settings-switch.on .settings-switch-knob {
     transform: translateX(24px);
 }
-.settings-switch:focus-visible {
-    outline: 3px solid rgba(46,196,182,0.4);
+/* Accessible toggle focus */
+.settings-switch {
+    border: 2px solid var(--color-primary);
 }
+
+.settings-switch:focus-visible {
+    outline: none;
+    box-shadow:
+        0 0 0 2px #ffffff,
+        0 0 0 5px var(--color-primary);
+}
+
 /* ================================================= */
 /* PROFILE SECTIONS                    */
 /* ================================================= */
@@ -652,6 +661,13 @@ body {
     align-items: center;
     gap: 1.25rem;
     font-size: 1.05rem;
+}
+/* Every other row */
+.profile-list .profile-row:nth-child(even) {
+    background-color: #f1f5f9;
+}
+.profile-list .profile-row:hover {
+    background-color: #e9eff6;
 }
 
 .profile-keyword {
@@ -791,3 +807,44 @@ a,
 input {
     transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
+/* ================================================= */
+/* Fixes for accessibility                           */
+/* ================================================= */
+/* All primary filled buttons */
+.login-card button,
+.register-card button,
+.searchbar-btn,
+.profile-add-btn,
+.profile-save-btn,
+.profile-upgrade-btn,
+.profile-undo-btn,
+.result-actions button.selected {
+    border: 2px solid rgba(255, 255, 255, 0.85);
+}
+
+/* Keep border on hover */
+.login-card button:hover,
+.register-card button:hover,
+.searchbar-btn:hover,
+.profile-add-btn:hover,
+.profile-save-btn:hover,
+.profile-upgrade-btn:hover,
+.profile-undo-btn:hover,
+.result-actions button.selected:hover {
+    border-color: #ffffff;
+}
+
+button:focus-visible {
+    outline: none;
+    box-shadow:
+        0 0 0 2px #ffffff,
+        0 0 0 5px rgba(46, 196, 182, 0.6);
+}
+
+/* Search bar focus container */
+.searchbar-container:focus-within {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgba(46,196,182,0.25);
+}
+

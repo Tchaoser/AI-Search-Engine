@@ -52,10 +52,24 @@ MAX_SYSTEM_PROMPT_CHARS = int(os.getenv("SE_MAX_SYSTEM_PROMPT_CHARS", "1200"))
 # Max allowed length for the user prompt (raw seed query)
 MAX_USER_PROMPT_CHARS = int(os.getenv("SE_MAX_USER_PROMPT_CHARS", "300"))
 
+# NOTE/TODO:
+# User interests are provided as a soft bias signal only.
+# The system prompt explicitly instructs the LLM not to infer or invent
+# query topics based solely on interests, to reduce semantic drift.
+# This is a prompt-level mitigation; stronger relevance gating may be
+# added later at the application layer.
 SYSTEM_PROMPT_BASE = (
     "You expand short user queries into a single detailed search query. "
-    "Keep it one line, clear, and specific (entities, synonyms/aliases in "
-    "parentheses, dates/regions, helpful keywords). Return ONLY the expanded query."
+    "Keep it one line, clear, and specific (entities, synonyms/aliases in parentheses, dates/regions, helpful keywords). "
+    "Return ONLY the expanded query. "
+
+    "Interpret the user's query first and preserve its original topic and intent. "
+    "Do NOT infer or invent a topic based solely on user interests. "
+
+    "User interests, if provided, are a soft bias only: "
+    "- Use them only when they clearly overlap with the query's subject. "
+    "- If the query is ambiguous or generic, do not resolve ambiguity using interests alone. "
+    "- If there is no clear overlap, ignore the interests entirely. "
 )
 
 
@@ -225,23 +239,22 @@ def _format_personalization_snippet(explicit: List[str], implicit: List[str]) ->
     """
     Build a short, structured personalization snippet to include in the system prompt.
 
-    Example output:
-      "User interests provided for context: Explicit = jobs, pokemon; Implicit = marvel, spiderman"
-
-    The LLM should treat these as contextual signals and apply them only when relevant.
+    The snippet is only shown if BOTH explicit and implicit interests exist.
+    Each section is only rendered if non-empty.
     """
+    # Do not show snippet unless at least one is present
     if not explicit and not implicit:
         return ""
 
-    explicit_str = ", ".join(explicit) if explicit else "none"
-    implicit_str = ", ".join(implicit) if implicit else "none"
+    parts = []
 
-    snippet = (
-        f"User interests provided for context: "
-        f"Explicit = {explicit_str}; Implicit = {implicit_str}."
-    )
+    if explicit:
+        parts.append(f"Explicit = {', '.join(explicit)}")
 
-    # return f"User interests provided for context: Explicit = {explicit_str}; Implicit = {implicit_str}."
+    if implicit:
+        parts.append(f"Implicit = {', '.join(implicit)}")
+
+    snippet = "User interests provided for context: " + "; ".join(parts) + "."
     snippet = _normalize_single_line(snippet)
 
     if MAX_SNIPPET_CHARS > 0:
@@ -287,7 +300,7 @@ async def expand_query(
     the expansion using the user's profile interests and verbosity level.
 
     Verbosity controls which interests are included in the personalization snippet:
-      - off    → no personalization
+      - off    → no interest-based personalization
       - low    → strong explicit interests only
       - medium → strong explicit + top implicit
       - high   → all explicit + all implicit
@@ -367,11 +380,11 @@ async def expand_query(
                         "[Personalization] Applied for user_id=%s (verbosity=%s): %s",
                         user_id, verbosity, snippet
                     )
-                    logger.info(
-                        "[Personalization] Full system prompt before truncation (len=%d): %s",
-                        len(system_prompt),
-                        system_prompt
-                    )
+                logger.info(
+                    "[Personalization] Full system prompt before truncation (len=%d): %s",
+                    len(system_prompt),
+                    system_prompt
+                )
             else:
                 logger.info("No profile found for user_id=%s", user_id)
     except Exception as e:

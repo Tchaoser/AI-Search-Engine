@@ -58,6 +58,7 @@ SYSTEM_PROMPT_BASE = (
     "parentheses, dates/regions, helpful keywords). Return ONLY the expanded query."
 )
 
+
 # -----------------------
 # Normalize and Truncate
 # -----------------------
@@ -108,6 +109,7 @@ def _truncate_text(text: str, max_len: int, context: str) -> str:
 # Simple tokenizer
 # -----------------------
 _TOKEN_WORD_REGEX = re.compile(r"\w+")
+
 
 def _simple_tokenize(text: str) -> List[str]:
     """
@@ -239,7 +241,7 @@ def _format_personalization_snippet(explicit: List[str], implicit: List[str]) ->
         f"Explicit = {explicit_str}; Implicit = {implicit_str}."
     )
 
-    #return f"User interests provided for context: Explicit = {explicit_str}; Implicit = {implicit_str}."
+    # return f"User interests provided for context: Explicit = {explicit_str}; Implicit = {implicit_str}."
     snippet = _normalize_single_line(snippet)
 
     if MAX_SNIPPET_CHARS > 0:
@@ -249,6 +251,7 @@ def _format_personalization_snippet(explicit: List[str], implicit: List[str]) ->
             context="Personalization snippet",
         )
     return snippet
+
 
 def _strip_wrapping_quotes(text: str) -> str:
     """
@@ -271,32 +274,43 @@ def _strip_wrapping_quotes(text: str) -> str:
     return text
 
 
-
 # -----------------------
 # Main expansion entrypoint
 # -----------------------
-async def expand_query(seed: str, user_id: Optional[str] = None) -> str:
+async def expand_query(
+        seed: str,
+        user_id: Optional[str] = None,
+        verbosity: str = "medium",
+) -> str:
     """
     Expand the user's `seed` query using the configured LLM, optionally biasing
-    the expansion using the user's profile interests.
+    the expansion using the user's profile interests and verbosity level.
+
+    Verbosity controls which interests are included in the personalization snippet:
+      - off    → no personalization
+      - low    → strong explicit interests only
+      - medium → strong explicit + top implicit
+      - high   → all explicit + all implicit
 
     Steps:
-      1. Return cached expansion (if present).
-      2. If user_id provided and profile exists:
-           - extract explicit + implicit interests (no transforms)
-           - take top-K from each independently
-           - create a short personalization snippet and attach it to the system prompt
-      3. Call the LLM and return the expanded query (or the seed on failure).
-      4. Cache the result.
+      1. Normalize and truncate seed query.
+      2. Return cached expansion (if present).
+      3. If user_id provided and profile exists:
+           - extract explicit + implicit interests
+           - take top-K lists
+           - filter interests according to verbosity
+           - create personalization snippet
+      4. Build system prompt and call LLM
+      5. Cache result and return
 
     Returns:
-      The expanded query string (single-line, whitespace-normalized).
+      Expanded query string (single-line, whitespace-normalized)
     """
     seed = (seed or "").strip()
     seed = _normalize_single_line(seed)
 
-    # Enforce max length on the user prompt BEFORE cache, personalization, or LLM call
-    if MAX_USER_PROMPT_CHARS > 0 and len(seed) > MAX_USER_PROMPT_CHARS:
+    # Enforce max length on user prompt BEFORE cache/personalization
+    if 0 < MAX_USER_PROMPT_CHARS < len(seed):
         seed = _truncate_text(seed, MAX_USER_PROMPT_CHARS, context="User prompt")
 
     if not seed:
@@ -321,28 +335,54 @@ async def expand_query(seed: str, user_id: Optional[str] = None) -> str:
                 implicit_map = _extract_implicit(profile)
 
                 top_explicit, top_implicit = _select_top_k(explicit_map, implicit_map)
-                snippet = _format_personalization_snippet(top_explicit, top_implicit)
+
+                # Verbosity-based filtering
+                verbosity = (verbosity or "medium").lower()
+                if verbosity not in {"off", "low", "medium", "high"}:
+                    verbosity = "medium"
+
+                all_explicit = sorted(explicit_map.keys(), key=lambda k: explicit_map[k], reverse=True)
+                all_implicit = sorted(implicit_map.keys(), key=lambda k: implicit_map[k], reverse=True)
+
+                if verbosity == "off":
+                    final_explicit = []
+                    final_implicit = []
+                elif verbosity == "low":
+                    final_explicit = top_explicit
+                    final_implicit = []
+                elif verbosity == "medium":
+                    final_explicit = top_explicit
+                    final_implicit = top_implicit
+                elif verbosity == "high":
+                    final_explicit = all_explicit
+                    final_implicit = all_implicit
+
+                snippet = _format_personalization_snippet(final_explicit, final_implicit)
                 if snippet:
                     system_prompt = (
                         f"{SYSTEM_PROMPT_BASE} When expanding the query, consider "
                         f"the following user interest context (apply only when relevant): {snippet}"
                     )
-                    logger.info("[Personalization] Applied for user_id=%s: %s", user_id, snippet)
+                    logger.info(
+                        "[Personalization] Applied for user_id=%s (verbosity=%s): %s",
+                        user_id, verbosity, snippet
+                    )
+                    logger.info(
+                        "[Personalization] Full system prompt before truncation (len=%d): %s",
+                        len(system_prompt),
+                        system_prompt
+                    )
             else:
                 logger.info("No profile found for user_id=%s", user_id)
     except Exception as e:
         logger.exception("Error during personalization extraction/selection: %s", e)
         system_prompt = SYSTEM_PROMPT_BASE
 
-    #2.1 
+    # Normalize & truncate system prompt
     system_prompt = _normalize_single_line(system_prompt)
 
-    if MAX_SYSTEM_PROMPT_CHARS > 0 and len(system_prompt) > MAX_SYSTEM_PROMPT_CHARS:
-        system_prompt = _truncate_text(
-            system_prompt,
-            MAX_SYSTEM_PROMPT_CHARS,
-            context="System prompt",
-        )
+    if 0 < MAX_SYSTEM_PROMPT_CHARS < len(system_prompt):
+        system_prompt = _truncate_text(system_prompt, MAX_SYSTEM_PROMPT_CHARS, context="System prompt")
 
     # 3) Prepare LLM payload and call
     expanded = seed
@@ -356,10 +396,7 @@ async def expand_query(seed: str, user_id: Optional[str] = None) -> str:
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post(
-                f"{OLLAMA_URL.rstrip('/')}/api/generate",
-                json=payload
-            )
+            resp = await client.post(f"{OLLAMA_URL.rstrip('/')}/api/generate", json=payload)
         resp.raise_for_status()
 
         raw = (resp.json().get("response") or "").strip()

@@ -14,23 +14,59 @@ logger = AppLogger.get_logger(__name__)
 async def search_endpoint(
         q: str = Query(...),
         use_enhanced: bool = Query(True),
+        verbosity: str = Query("medium"),
         user_id: str = Depends(get_user_id_from_auth)
 ):
     """
     Search endpoint with optional semantic expansion.
-    - If use_enhanced=True, attempt semantic expansion.
-    - If expansion fails or use_enhanced=False, fall back to original query.
+
+    Behavior:
+      - If use_enhanced=True, attempt semantic expansion using an LLM.
+      - Personalization snippet can be included based on user profile and verbosity.
+      - If expansion fails or use_enhanced=False, fall back to original query.
+
+    Parameters:
+      q: str
+        The raw search query entered by the user.
+      use_enhanced: bool
+        Whether to apply semantic expansion (defaults to True).
+      verbosity: str
+        How strongly personalization is applied (defaults to 'medium').
+        Possible values:
+          - off      → no personalization snippet
+          - low      → strong interests only
+          - medium   → strong + medium
+          - high     → all available interests
+      user_id: str (from Depends)
+        Authenticated user ID; guest if not logged in.
+
+    Returns:
+      JSON object with:
+        - query_id
+        - results (list)
+        - original_query
+        - enhanced_query
+        - use_enhanced
+        - verbosity
     """
     start_time = time.time()
+
+    # Log initial request
     logger.info("Search request received", extra={
         "user_id": user_id,
         "query": q,
-        "use_enhanced": use_enhanced
+        "use_enhanced": use_enhanced,
+        "verbosity": verbosity,
     })
 
     if use_enhanced:
-        # Pass user_id for personalization
-        enhanced = await expand_query(q, user_id=user_id)  # safe fallback implemented inside expand_query
+        # Pass user_id and verbosity for personalized semantic expansion
+        enhanced = await expand_query(
+            q,
+            user_id=user_id,
+            verbosity=verbosity,
+        )
+
         if enhanced != q:
             logger.debug("Query expanded", extra={
                 "original": q,
@@ -40,8 +76,7 @@ async def search_endpoint(
         enhanced = q
         logger.debug("Query expansion disabled", extra={"query": q})
 
-    # Log the query before search so the user's profile reflects the most recent
-    # session activity and can influence personalized reranking.
+    # Log the query in DB before search (helps personalization/reranking)
     query_id = log_query(
         user_id=user_id,
         raw_text=q,
@@ -52,13 +87,17 @@ async def search_endpoint(
         "query_id": query_id
     })
 
-    # Perform search using whichever query is active, pass user_id for personalization
+    # Perform search using the active query
     results = search(enhanced, user_id=user_id)
+
+    # Measure duration
     elapsed_ms = round((time.time() - start_time) * 1000, 2)
     logger.info("Search completed", extra={
         "user_id": user_id,
         "result_count": len(results),
-        "duration_ms": elapsed_ms
+        "duration_ms": elapsed_ms,
+        "use_enhanced": use_enhanced,
+        "verbosity": verbosity,
     })
 
     return {
@@ -66,7 +105,8 @@ async def search_endpoint(
         "results": results,
         "original_query": q,
         "enhanced_query": enhanced,
-        "use_enhanced": use_enhanced
+        "use_enhanced": use_enhanced,
+        "verbosity": verbosity,
     }
 
 
@@ -106,6 +146,7 @@ async def log_click(
         "interaction_id": interaction_id,
         "status": "logged"
     }
+
 
 @router.post("/feedback")
 async def log_feedback_endpoint(

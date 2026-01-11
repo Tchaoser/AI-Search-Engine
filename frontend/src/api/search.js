@@ -3,9 +3,29 @@ import { getAuthHeaders, clearCurrentUser } from "../auth/auth.js";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
+/**
+ * Perform a search query.
+ *
+ * @param {string} query - The raw user query
+ * @param {boolean} useEnhanced - Whether semantic expansion is enabled
+ *
+ * Verbosity behavior:
+ * - Pulled from localStorage key: "semanticVerbosity"
+ * - Defaults to "medium" if unset
+ * - Always sent to backend, but backend may ignore it if useEnhanced=false
+ */
 export async function searchQuery(query, useEnhanced = true) {
-    const url = `${API_BASE}/search?q=${encodeURIComponent(query)}&use_enhanced=${useEnhanced}`;
+    const verbosity =
+        localStorage.getItem("semanticVerbosity") || "medium";
+
+    const url =
+        `${API_BASE}/search` +
+        `?q=${encodeURIComponent(query)}` +
+        `&use_enhanced=${useEnhanced}` +
+        `&verbosity=${encodeURIComponent(verbosity)}`;
+
     const headers = getAuthHeaders();
+
     try {
         const res = await axios.get(url, { headers });
         return res.data;
@@ -14,7 +34,9 @@ export async function searchQuery(query, useEnhanced = true) {
             // Token expired or invalid — force logout and redirect to login
             clearCurrentUser();
             window.location.href = "/login";
-            return Promise.reject(new Error("Unauthorized: token expired or invalid"));
+            return Promise.reject(
+                new Error("Unauthorized: token expired or invalid")
+            );
         }
         throw err;
     }
@@ -25,18 +47,30 @@ export async function logClick({ user_id, query_id, clicked_url, rank }) {
     const headers = { "Content-Type": "application/json", ...getAuthHeaders() };
     // If you pass user_id in the body it will be ignored if there's a logged-in user.
     try {
-        await axios.post(url, { user_id, query_id, clicked_url, rank }, { headers });
+        await axios.post(
+            url,
+            { user_id, query_id, clicked_url, rank },
+            { headers }
+        );
     } catch (err) {
         if (err?.response?.status === 401) {
             clearCurrentUser();
             window.location.href = "/login";
-            return Promise.reject(new Error("Unauthorized: token expired or invalid"));
+            return Promise.reject(
+                new Error("Unauthorized: token expired or invalid")
+            );
         }
         throw err;
     }
 }
 
-export async function logFeedback({ user_id, query_id, result_url, rank, is_relevant }) {
+export async function logFeedback({
+                                      user_id,
+                                      query_id,
+                                      result_url,
+                                      rank,
+                                      is_relevant,
+                                  }) {
     const url = `${API_BASE}/feedback`;
     const headers = { "Content-Type": "application/json", ...getAuthHeaders() };
     // If you pass user_id in the body it will be ignored if there's a logged-in users.
@@ -45,15 +79,16 @@ export async function logFeedback({ user_id, query_id, result_url, rank, is_rele
         await axios.post(
             url,
             { user_id, query_id, result_url, rank, is_relevant },
-            { headers },
+            { headers }
         );
     } catch (err) {
         if (err?.response?.status === 401) {
             clearCurrentUser();
             window.location.href = "/login";
-            return Promise.reject(new Error("Unauthorized: token expired or invalid"));
+            return Promise.reject(
+                new Error("Unauthorized: token expired or invalid")
+            );
         }
         throw err;
     }
 }
-

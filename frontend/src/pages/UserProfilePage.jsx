@@ -16,6 +16,7 @@ export default function UserProfilePage() {
     const [newInterest, setNewInterest] = useState("");
 
     const [loadingSave, setLoadingSave] = useState(false);
+    const [loadingImplicitRemove] = useState(false);
 
     const loadProfile = useCallback(() => {
         fetch(`${API_URL}/profiles/${userId}`)

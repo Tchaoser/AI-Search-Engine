@@ -46,17 +46,28 @@ TOP_K_EXPLICIT = int(os.getenv("SE_EXP_TOP_K_EXPLICIT", "5"))
 TOP_K_IMPLICIT = int(os.getenv("SE_EXP_TOP_K_IMPLICIT", "5"))
 
 # Max allowed length for the personalization snippet (user interest context)
-MAX_SNIPPET_CHARS = int(os.getenv("SE_MAX_SNIPPET_CHARS", "300"))
+MAX_SNIPPET_CHARS = int(os.getenv("SE_MAX_SNIPPET_CHARS", "600"))
 # Max allowed length for the full system prompt sent to the LLM
 MAX_SYSTEM_PROMPT_CHARS = int(os.getenv("SE_MAX_SYSTEM_PROMPT_CHARS", "1200"))
 # Max allowed length for the user prompt (raw seed query)
-MAX_USER_PROMPT_CHARS = int(os.getenv("SE_MAX_USER_PROMPT_CHARS", "300"))
+MAX_USER_PROMPT_CHARS = int(os.getenv("SE_MAX_USER_PROMPT_CHARS", "600"))
 
+# NOTE/TODO:
+# User interests are provided as a soft bias signal only.
+# The system prompt explicitly instructs the LLM not to infer or invent
+# query topics based solely on interests, to reduce semantic drift.
+# This is a prompt-level mitigation; LLMs can't completely ignore words given to them
+# Stronger relevance gating may be added later at the application layer.
 SYSTEM_PROMPT_BASE = (
-    "You expand short user queries into a single detailed search query. "
-    "Keep it one line, clear, and specific (entities, synonyms/aliases in "
-    "parentheses, dates/regions, helpful keywords). Return ONLY the expanded query."
-)
+    "Expand short user queries into a single detailed search query. "
+    "Keep it one line, clear, and specific (entities, synonyms/aliases in parentheses, dates/regions, helpful keywords). "
+    "Return ONLY the expanded query. "
+    "Interpret the user's query first and preserve its original topic and intent. "
+    "Do NOT infer or invent topics based solely on user interests. "
+    "Treat user interests as a soft bias only: "
+    "- Strong interests: may guide wording strongly, only if they clearly overlap the query topic. "
+    "- Medium interests: background context; do not let them shift the main query focus. "
+    "- Weak interests: generally ignore unless directly relevant to the query. ")
 
 # -----------------------
 # Normalize and Truncate
@@ -109,6 +120,7 @@ def _truncate_text(text: str, max_len: int, context: str) -> str:
 # -----------------------
 _TOKEN_WORD_REGEX = re.compile(r"\w+")
 
+
 def _simple_tokenize(text: str) -> List[str]:
     """
     Tokenize text into lowercase word tokens.
@@ -119,6 +131,77 @@ def _simple_tokenize(text: str) -> List[str]:
     if not text:
         return []
     return [t.lower() for t in _TOKEN_WORD_REGEX.findall(text)]
+
+
+# -----------------------
+# Interest strength labelling for explicit interests
+# -----------------------
+def _classify_explicit(explicit: Dict[str, float]) -> Dict[str, List[str]]:
+    buckets = {"strong": [], "medium": [], "weak": []}
+    for kw, w in explicit.items():
+        if w >= 0.70:
+            buckets["strong"].append(kw)
+        elif w >= 0.40:
+            buckets["medium"].append(kw)
+        else:
+            buckets["weak"].append(kw)
+    return buckets
+
+
+# -----------------------
+# Interest strength labelling for implicit interests
+# -----------------------
+def _classify_implicit(implicit: Dict[str, float]) -> Dict[str, List[str]]:
+    """
+    Classify top-K implicit interests into strong/medium/weak using relative dominance.
+    Heuristic:
+      - Strong: top1 >= 1.5x top2 AND top1 >= 10
+      - Medium: top1 >= 2x median(top5) or score >= 6
+      - Weak: everything else
+    """
+    buckets = {"strong": [], "medium": [], "weak": []}
+    if not implicit:
+        return buckets
+
+    sorted_items = sorted(implicit.items(), key=lambda kv: kv[1], reverse=True)
+    top_scores = [v for _, v in sorted_items[:5]]  # consider top 5
+    top1 = top_scores[0]
+    top2 = top_scores[1] if len(top_scores) > 1 else 0
+    median_top5 = sorted(top_scores)[len(top_scores) // 2]
+
+    for kw, score in sorted_items:
+        if 1.5 * top2 <= top1 == score and top1 >= 10:
+            buckets["strong"].append(kw)
+        elif score >= max(6, 2 * median_top5):
+            buckets["medium"].append(kw)
+        else:
+            buckets["weak"].append(kw)
+
+    return buckets
+
+
+# -----------------------
+# Verbosity filtering
+# -----------------------
+def _filter_tiers_by_verbosity(tiers: Dict[str, List[str]], verbosity: str) -> Dict[str, List[str]]:
+    """
+    Filters strong/medium/weak tiers based on verbosity:
+      - off    → none
+      - low    → strong only
+      - medium → strong + medium
+      - high   → all tiers
+    """
+    if verbosity == "off":
+        return {"strong": [], "medium": [], "weak": []}
+    if verbosity == "low":
+        return {"strong": tiers.get("strong", []), "medium": [], "weak": []}
+    if verbosity == "medium":
+        return {
+            "strong": tiers.get("strong", []),
+            "medium": tiers.get("medium", []),
+            "weak": [],
+        }
+    return tiers  # high
 
 
 # -----------------------
@@ -219,27 +302,24 @@ def _select_top_k(explicit: Dict[str, float], implicit: Dict[str, float]) -> Tup
 # -----------------------
 # Format personalization snippet
 # -----------------------
-def _format_personalization_snippet(explicit: List[str], implicit: List[str]) -> str:
+def _format_personalization_snippet(explicit: Dict[str, List[str]], implicit: Dict[str, List[str]]) -> str:
     """
-    Build a short, structured personalization snippet to include in the system prompt.
-
-    Example output:
-      "User interests provided for context: Explicit = jobs, pokemon; Implicit = marvel, spiderman"
-
-    The LLM should treat these as contextual signals and apply them only when relevant.
+    Build a tiered personalization snippet. Explicit and implicit interests
+    are passed as { "strong": [...], "medium": [...], "weak": [...] }.
+    Weak signals are considered background only.
     """
-    if not explicit and not implicit:
+    parts = []
+
+    for tier in ["strong", "medium", "weak"]:
+        if explicit.get(tier):
+            parts.append(f"{tier.capitalize()} explicit interests: {', '.join(explicit[tier])}")
+        if implicit.get(tier):
+            parts.append(f"{tier.capitalize()} implicit interests: {', '.join(implicit[tier])}")
+
+    if not parts:
         return ""
 
-    explicit_str = ", ".join(explicit) if explicit else "none"
-    implicit_str = ", ".join(implicit) if implicit else "none"
-
-    snippet = (
-        f"User interests provided for context: "
-        f"Explicit = {explicit_str}; Implicit = {implicit_str}."
-    )
-
-    #return f"User interests provided for context: Explicit = {explicit_str}; Implicit = {implicit_str}."
+    snippet = "User interests provided for context: " + "; ".join(parts) + "."
     snippet = _normalize_single_line(snippet)
 
     if MAX_SNIPPET_CHARS > 0:
@@ -249,6 +329,7 @@ def _format_personalization_snippet(explicit: List[str], implicit: List[str]) ->
             context="Personalization snippet",
         )
     return snippet
+
 
 def _strip_wrapping_quotes(text: str) -> str:
     """
@@ -271,32 +352,43 @@ def _strip_wrapping_quotes(text: str) -> str:
     return text
 
 
-
 # -----------------------
 # Main expansion entrypoint
 # -----------------------
-async def expand_query(seed: str, user_id: Optional[str] = None) -> str:
+async def expand_query(
+        seed: str,
+        user_id: Optional[str] = None,
+        verbosity: str = "medium",
+) -> str:
     """
     Expand the user's `seed` query using the configured LLM, optionally biasing
-    the expansion using the user's profile interests.
+    the expansion using the user's profile interests and verbosity level.
+
+    Verbosity controls which interests are included in the personalization snippet:
+      - off    → no interest-based personalization
+      - low    → strong explicit interests only
+      - medium → strong explicit + top implicit
+      - high   → all explicit + all implicit
 
     Steps:
-      1. Return cached expansion (if present).
-      2. If user_id provided and profile exists:
-           - extract explicit + implicit interests (no transforms)
-           - take top-K from each independently
-           - create a short personalization snippet and attach it to the system prompt
-      3. Call the LLM and return the expanded query (or the seed on failure).
-      4. Cache the result.
+      1. Normalize and truncate seed query.
+      2. Return cached expansion (if present).
+      3. If user_id provided and profile exists:
+           - extract explicit + implicit interests
+           - take top-K lists
+           - filter interests according to verbosity
+           - create personalization snippet
+      4. Build system prompt and call LLM
+      5. Cache result and return
 
     Returns:
-      The expanded query string (single-line, whitespace-normalized).
+      Expanded query string (single-line, whitespace-normalized)
     """
     seed = (seed or "").strip()
     seed = _normalize_single_line(seed)
 
-    # Enforce max length on the user prompt BEFORE cache, personalization, or LLM call
-    if MAX_USER_PROMPT_CHARS > 0 and len(seed) > MAX_USER_PROMPT_CHARS:
+    # Enforce max length on user prompt BEFORE cache/personalization
+    if 0 < MAX_USER_PROMPT_CHARS < len(seed):
         seed = _truncate_text(seed, MAX_USER_PROMPT_CHARS, context="User prompt")
 
     if not seed:
@@ -321,31 +413,49 @@ async def expand_query(seed: str, user_id: Optional[str] = None) -> str:
                 implicit_map = _extract_implicit(profile)
 
                 top_explicit, top_implicit = _select_top_k(explicit_map, implicit_map)
-                snippet = _format_personalization_snippet(top_explicit, top_implicit)
+
+                # Verbosity-based filtering
+                verbosity = (verbosity or "medium").lower()
+                if verbosity not in {"off", "low", "medium", "high"}:
+                    verbosity = "medium"
+
+                # classify tiers
+                explicit_tiers = _classify_explicit(explicit_map)
+                implicit_tiers = _classify_implicit(implicit_map)
+
+                # filter tiers based on verbosity
+                explicit_tiers = _filter_tiers_by_verbosity(explicit_tiers, verbosity)
+                implicit_tiers = _filter_tiers_by_verbosity(implicit_tiers, verbosity)
+
+                # build snippet
+                snippet = _format_personalization_snippet(explicit_tiers, implicit_tiers)
                 if snippet:
                     system_prompt = (
                         f"{SYSTEM_PROMPT_BASE} When expanding the query, consider "
                         f"the following user interest context (apply only when relevant): {snippet}"
                     )
-                    logger.info("[Personalization] Applied for user_id=%s: %s", user_id, snippet)
+                    logger.info(
+                        "[Personalization] Applied for user_id=%s (verbosity=%s): %s",
+                        user_id, verbosity, snippet
+                    )
+                logger.info(
+                    "[Personalization] Full system prompt before truncation (len=%d): %s",
+                    len(system_prompt),
+                    system_prompt
+                )
             else:
                 logger.info("No profile found for user_id=%s", user_id)
     except Exception as e:
         logger.exception("Error during personalization extraction/selection: %s", e)
         system_prompt = SYSTEM_PROMPT_BASE
 
-    #2.1 
+    # Normalize & truncate system prompt
     system_prompt = _normalize_single_line(system_prompt)
 
-    if MAX_SYSTEM_PROMPT_CHARS > 0 and len(system_prompt) > MAX_SYSTEM_PROMPT_CHARS:
-        system_prompt = _truncate_text(
-            system_prompt,
-            MAX_SYSTEM_PROMPT_CHARS,
-            context="System prompt",
-        )
+    if 0 < MAX_SYSTEM_PROMPT_CHARS < len(system_prompt):
+        system_prompt = _truncate_text(system_prompt, MAX_SYSTEM_PROMPT_CHARS, context="System prompt")
 
     # 3) Prepare LLM payload and call
-    expanded = seed
     payload = {
         "model": OLLAMA_MODEL,
         "stream": False,
@@ -356,10 +466,7 @@ async def expand_query(seed: str, user_id: Optional[str] = None) -> str:
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post(
-                f"{OLLAMA_URL.rstrip('/')}/api/generate",
-                json=payload
-            )
+            resp = await client.post(f"{OLLAMA_URL.rstrip('/')}/api/generate", json=payload)
         resp.raise_for_status()
 
         raw = (resp.json().get("response") or "").strip()

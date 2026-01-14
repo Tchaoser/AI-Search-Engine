@@ -35,71 +35,51 @@ export default function LoginPage() {
     };
 
     return (
-        <div
-            className="profile-card"
-            style={{
-                maxWidth: "650px", 
-                width: "92%",
-                margin: "120px auto",
-                padding: "3rem 3rem", 
-                borderRadius: "1rem",
-            }}
-        >
-            <h3
-                className="profile-section-title"
-                style={{ fontSize: "2rem", marginBottom: "2rem" }}
-            >
-                Login
-            </h3>
+        <div className="login-page">
+            <div className="login-card">
+                <h1>Login</h1>
 
-            {err && (
-                <p
-                    className="text-red"
-                    style={{ fontSize: "1.1rem", marginBottom: "1rem" }}
-                >
-                    {err}
-                </p>
-            )}
+                {err && (
+                    <p className="text-red" style={{ marginBottom: "1rem" }}>
+                        {err}
+                    </p>
+                )}
 
-            <form onSubmit={submit} className="flex flex-col" style={{ gap: "1.5rem" }}>
-                <input
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="username"
-                    className="profile-input"
-                    style={{
-                        fontSize: "1.2rem",
-                        padding: "1rem",
-                        height: "55px",
-                    }}
-                />
+                <form onSubmit={submit}>
 
-                <input
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    type="password"
-                    placeholder="password"
-                    className="profile-input"
-                    style={{
-                        fontSize: "1.2rem",
-                        padding: "1rem",
-                        height: "55px",
-                    }}
-                />
+                    {/* Username */}
+                    <label htmlFor="username" className="visually-hidden">
+                        Username
+                    </label>
+                    <input
+                        id="username"
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="Username"
+                        autoComplete="username"
+                        required
+                    />
 
-                <button
-                    type="submit"
-                    className="profile-save-btn"
-                    style={{
-                        fontSize: "1.2rem",
-                        padding: "0.9rem 1.4rem",
-                        width: "150px",
-                        marginTop: "0.5rem"
-                    }}
-                >
-                    Login
-                </button>
-            </form>
+                    {/* Password */}
+                    <label htmlFor="password" className="visually-hidden">
+                        Password
+                    </label>
+                    <input
+                        id="password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Password"
+                        autoComplete="current-password"
+                        required
+                    />
+
+                    <button type="submit">
+                        Login
+                    </button>
+                </form>
+            </div>
         </div>
     );
 }

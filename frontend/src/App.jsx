@@ -11,14 +11,12 @@ import RegisterPage from "./pages/RegisterPage.jsx";
 export default function App() {
     return (
         <Router>
-            <div className="min-h-screen flex flex-col">
-                <header className="header bg-blue-100 text-white">
-                    <div className="container flex items-center justify-between py-3">
-                        <Navbar />
-                    </div>
-                </header>
+            <div className="app-shell">
+                {/* NAVBAR */}
+                <Navbar />
 
-                <main className="main container py-6">
+                {/* MAIN CONTENT */}
+                <main className="app-content">
                     <Routes>
                         <Route path="/" element={<SearchPage />} />
                         <Route path="/profile" element={<UserProfilePage />} />
@@ -28,10 +26,9 @@ export default function App() {
                     </Routes>
                 </main>
 
-                <footer className="footer bg-gray-200">
-                    <div className="container py-4">
-                        <Footer />
-                    </div>
+                {/* FOOTER */}
+                <footer className="app-footer">
+                    <Footer />
                 </footer>
             </div>
         </Router>

@@ -95,7 +95,7 @@ export default function SettingsPage() {
                                 <strong>Personalization Verbosity</strong>
                             </label>
                             <p className="settings-description">
-                                Controls how strongly your interests influence semantic expansion
+                                Controls how many of your interests influence semantic expansion
                             </p>
                         </div>
 

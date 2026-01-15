@@ -58,16 +58,38 @@ MAX_USER_PROMPT_CHARS = int(os.getenv("SE_MAX_USER_PROMPT_CHARS", "600"))
 # query topics based solely on interests, to reduce semantic drift.
 # This is a prompt-level mitigation; LLMs can't completely ignore words given to them
 # Stronger relevance gating may be added later at the application layer.
-SYSTEM_PROMPT_BASE = (
-    "Expand short user queries into a single detailed search query. "
-    "Keep it one line, clear, and specific (entities, synonyms/aliases in parentheses, dates/regions, helpful keywords). "
-    "Return ONLY the expanded query. "
-    "Interpret the user's query first and preserve its original topic and intent. "
-    "Do NOT infer or invent topics based solely on user interests. "
-    "Treat user interests as a soft bias only: "
-    "- Strong interests: may guide wording strongly, only if they clearly overlap the query topic. "
-    "- Medium interests: background context; do not let them shift the main query focus. "
-    "- Weak interests: generally ignore unless directly relevant to the query. ")
+
+SYSTEM_PROMPT_CLARIFY_ONLY = (
+    "Expand the user's query into a Google search–optimized query. "
+    "Use concise keyword-style phrasing, not full sentences. "
+    "Preserve the user's original topic and breadth; do NOT narrow, reinterpret, "
+    "or resolve ambiguity using user interests. "
+    "If the query has multiple common interpretations, retain all major interpretations. "
+    "Add only widely accepted retrieval signals (e.g., 'best', 'top', 'list', "
+    "'ranking', 'reviews', 'of all time') when they clearly match the user's intent. "
+    "Parentheses may be used ONLY for common aliases or abbreviations. "
+    "Do NOT add examples, explanations, stylistic descriptions, or exclusions. "
+    "Do NOT mention unrelated domains, even negatively. "
+    "User interests may influence wording only when they clearly overlap the query topic, "
+    "and must never introduce new concepts or remove interpretations. "
+    "Return ONLY the expanded query as a single line."
+)
+
+SYSTEM_PROMPT_CLARIFY_AND_PERSONALIZE = (
+    "Expand the user's query into a Google search–optimized query. "
+    "Use concise keyword-style phrasing, not full sentences. "
+    "Preserve the user's original topic and intent. "
+    "If the query is ambiguous and has multiple reasonable interpretations, "
+    "strong user interests may be used to resolve the ambiguity toward the most "
+    "personally relevant interpretation. "
+    "Add only widely accepted retrieval signals (e.g., 'best', 'top', 'list', "
+    "'ranking', 'reviews', 'of all time') when they clearly match the user's intent. "
+    "Parentheses may be used ONLY for common aliases or abbreviations. "
+    "Do NOT add examples, explanations, stylistic descriptions, or exclusions. "
+    "Do NOT mention unrelated domains, even negatively. "
+    "User interests must never introduce unrelated concepts. "
+    "Return ONLY the expanded query as a single line."
+)
 
 # -----------------------
 # Normalize and Truncate
@@ -359,6 +381,7 @@ async def expand_query(
         seed: str,
         user_id: Optional[str] = None,
         verbosity: str = "medium",
+        semantic_mode: str = "clarify_only",
 ) -> str:
     """
     Expand the user's `seed` query using the configured LLM, optionally biasing
@@ -384,6 +407,12 @@ async def expand_query(
     Returns:
       Expanded query string (single-line, whitespace-normalized)
     """
+
+    semantic_mode = (semantic_mode or "clarify_only").lower()
+    if semantic_mode not in {"clarify_only", "clarify_and_personalize"}:
+        semantic_mode = "clarify_only"
+
+
     seed = (seed or "").strip()
     seed = _normalize_single_line(seed)
 
@@ -396,7 +425,7 @@ async def expand_query(
         return seed
 
     # 1) Cache check
-    cached = query_cache.get(seed, OLLAMA_MODEL, OLLAMA_TEMP)
+    cached = query_cache.get(seed, OLLAMA_MODEL, OLLAMA_TEMP, semantic_mode, verbosity)
     if cached:
         logger.debug("Query expansion cache hit", extra={"original": seed, "expanded": cached})
         return cached
@@ -404,15 +433,20 @@ async def expand_query(
         logger.debug("Query expansion cache miss", extra={"original": seed})
 
     # 2) Build system prompt
-    system_prompt = SYSTEM_PROMPT_BASE
+    logger.info(semantic_mode)
+    logger.info(semantic_mode)
+    logger.info(semantic_mode)
+    if semantic_mode == "clarify_and_personalize":
+        system_prompt = SYSTEM_PROMPT_CLARIFY_AND_PERSONALIZE
+    else:
+        system_prompt = SYSTEM_PROMPT_CLARIFY_ONLY
+
     try:
         if user_id:
             profile = user_profiles_col.find_one({"user_id": user_id})
             if profile:
                 explicit_map = _extract_explicit(profile)
                 implicit_map = _extract_implicit(profile)
-
-                top_explicit, top_implicit = _select_top_k(explicit_map, implicit_map)
 
                 # Verbosity-based filtering
                 verbosity = (verbosity or "medium").lower()
@@ -431,8 +465,7 @@ async def expand_query(
                 snippet = _format_personalization_snippet(explicit_tiers, implicit_tiers)
                 if snippet:
                     system_prompt = (
-                        f"{SYSTEM_PROMPT_BASE} When expanding the query, consider "
-                        f"the following user interest context (apply only when relevant): {snippet}"
+                        f"{system_prompt} When expanding the query, consider the following user interest context: {snippet}"
                     )
                     logger.info(
                         "[Personalization] Applied for user_id=%s (verbosity=%s): %s",
@@ -447,7 +480,8 @@ async def expand_query(
                 logger.info("No profile found for user_id=%s", user_id)
     except Exception as e:
         logger.exception("Error during personalization extraction/selection: %s", e)
-        system_prompt = SYSTEM_PROMPT_BASE
+        # fallback to the selected base prompt for the mode
+        system_prompt = system_prompt
 
     # Normalize & truncate system prompt
     system_prompt = _normalize_single_line(system_prompt)
@@ -496,7 +530,7 @@ async def expand_query(
 
     # 4) Cache result (even if identical to seed)
     try:
-        query_cache.set(seed, OLLAMA_MODEL, OLLAMA_TEMP, expanded)
+        query_cache.set(seed, OLLAMA_MODEL, OLLAMA_TEMP, semantic_mode, verbosity, expanded)
         logger.debug(
             "Query expansion complete",
             extra={"original": seed, "expanded": expanded, "same": seed == expanded},

@@ -14,6 +14,8 @@ if not GOOGLE_API_KEY or not GOOGLE_CX:
     logger.critical("Missing required Google API credentials")
     raise ValueError("Missing GOOGLE_API_KEY or GOOGLE_CX in environment variables (.env)")
 
+# Google Custom Search returns presentation-optimized fields, not raw document metadata.
+# There is no way to tell CSE not to truncate titles/snippets
 def search_google(query: str, num_results: int = 5):
     base_url = "https://www.googleapis.com/customsearch/v1"
     params = {

@@ -15,6 +15,7 @@ async def search_endpoint(
         q: str = Query(...),
         use_enhanced: bool = Query(True),
         verbosity: str = Query("medium"),
+        semantic_mode: str = Query("clarify_only"),
         user_id: str = Depends(get_user_id_from_auth)
 ):
     """
@@ -37,6 +38,11 @@ async def search_endpoint(
           - low      → strong interests only
           - medium   → strong + medium
           - high     → all available interests
+      semantic_mode: str
+        Determines how ambiguous queries are handled (defaults to 'clarify_only').
+        Possible values:
+          - clarify_only             → conservative expansion, never uses user interests to resolve ambiguity
+          - clarify_and_personalize  → uses strong user interests to resolve ambiguity when present
       user_id: str (from Depends)
         Authenticated user ID; guest if not logged in.
 
@@ -57,14 +63,16 @@ async def search_endpoint(
         "query": q,
         "use_enhanced": use_enhanced,
         "verbosity": verbosity,
+        "semantic mode": semantic_mode
     })
 
     if use_enhanced:
-        # Pass user_id and verbosity for personalized semantic expansion
+        # Pass user_id, verbosity, and semantic_mode for personalized semantic expansion
         enhanced = await expand_query(
             q,
             user_id=user_id,
             verbosity=verbosity,
+            semantic_mode=semantic_mode,
         )
 
         if enhanced != q:
@@ -98,6 +106,7 @@ async def search_endpoint(
         "duration_ms": elapsed_ms,
         "use_enhanced": use_enhanced,
         "verbosity": verbosity,
+        "semantic mode": semantic_mode
     })
 
     return {
@@ -107,6 +116,7 @@ async def search_endpoint(
         "enhanced_query": enhanced,
         "use_enhanced": use_enhanced,
         "verbosity": verbosity,
+        "semantic mode": semantic_mode
     }
 
 

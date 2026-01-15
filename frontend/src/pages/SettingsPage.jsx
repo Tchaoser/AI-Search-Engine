@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 export default function SettingsPage() {
     const [useEnhancedQuery, setUseEnhancedQuery] = useState(true);
     const [verbosity, setVerbosity] = useState("medium");
+    const [semanticMode, setSemanticMode] = useState("clarify_only");
 
     // Load from localStorage on mount
     useEffect(() => {
@@ -15,6 +16,11 @@ export default function SettingsPage() {
         if (savedVerbosity) {
             setVerbosity(savedVerbosity);
         }
+
+        const savedMode = localStorage.getItem("semanticMode");
+        if (savedMode) {
+            setSemanticMode(savedMode);
+        }
     }, []);
 
     const handleVerbosityChange = (e) => {
@@ -23,31 +29,33 @@ export default function SettingsPage() {
         localStorage.setItem("semanticVerbosity", value);
     };
 
+    const handleSemanticModeChange = (e) => {
+        const value = e.target.value;
+        setSemanticMode(value);
+        localStorage.setItem("semanticMode", value);
+    };
+
     return (
         <div className="container settings-page">
-
-            {/* Accessibility label */}
             <h1 className="settings-title">Settings</h1>
 
             <p className="settings-subtext">
                 Manage privacy, performance, and personalization options.
             </p>
 
-            {/* SETTINGS CARD */}
             <div className="settings-card">
 
                 {/* Semantic Expansion Toggle */}
                 <div className="settings-row">
                     <div className="settings-left">
                         <label className="settings-label" id="enhanced-query-label">
-                            Use Enhanced Query
+                            <strong>Use Enhanced Query</strong>
                         </label>
                         <p className="settings-description" id="enhanced-query-desc">
                             Enable semantic query expansion to improve search results
                         </p>
                     </div>
 
-                    {/* TOGGLE */}
                     <div
                         className={`settings-switch ${useEnhancedQuery ? "on" : ""}`}
                         role="switch"
@@ -84,7 +92,7 @@ export default function SettingsPage() {
                     <div className="settings-row" style={{ marginTop: "1.5rem" }}>
                         <div className="settings-left">
                             <label className="settings-label" htmlFor="verbosity-select">
-                                Personalization Verbosity
+                                <strong>Personalization Verbosity</strong>
                             </label>
                             <p className="settings-description">
                                 Controls how strongly your interests influence semantic expansion
@@ -110,6 +118,44 @@ export default function SettingsPage() {
                                 <option value="low">Low (strong interests only)</option>
                                 <option value="medium">Medium (strong + medium)</option>
                                 <option value="high">High (all interests)</option>
+                            </select>
+                        </div>
+                    </div>
+                )}
+
+                {/* Semantic Mode Selector */}
+                {useEnhancedQuery && (
+                    <div className="settings-row" style={{ marginTop: "1.5rem" }}>
+                        <div className="settings-left">
+                            <label className="settings-label" htmlFor="semantic-mode-select">
+                                <strong>Query Interpretation Mode</strong>
+                            </label>
+                            <p className="settings-description">
+                                Determines whether strong interests may resolve ambiguous queries
+                            </p>
+                        </div>
+
+                        <div className="dropdown" style={{ width: "320px" }}>
+                            <select
+                                id="semantic-mode-select"
+                                className="settings-select"
+                                value={semanticMode}
+                                onChange={handleSemanticModeChange}
+                                style={{
+                                    width: "100%",
+                                    padding: "0.5rem",
+                                    borderRadius: "0.5rem",
+                                    border: "1px solid #cbd5e1",
+                                    background: "white",
+                                    cursor: "pointer",
+                                }}
+                            >
+                                <option value="clarify_only">
+                                    Conservative (clarify only)
+                                </option>
+                                <option value="clarify_and_personalize">
+                                    Personalized (use strong interests to resolve ambiguity)
+                                </option>
                             </select>
                         </div>
                     </div>

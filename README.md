@@ -1,26 +1,26 @@
-# AI-Search-Engine
+## AI-Search-Engine
 
-AI-Search-Engine is a capstone project to build an intelligent web search agent that delivers a personalized search experience.  
-The system is planned to leverage user interests and search history to:
+AI-Search-Engine is a capstone project that explores personalized web search through lightweight, transparent AI.
+The system models user interests from search behavior and interactions to:
 
-- Learn and model individual preferences over time.
-- Enhance query understanding through semantic analysis.
-- Rank and filter search results for higher relevance.
-- Maintain secure, efficient, and privacy-conscious client-server communication.
+* Adapt results over time based on evolving preferences
+* Clarify and enrich queries using semantic analysis
+* Re-rank results for improved relevance
+* Maintain secure, privacy-conscious client–server communication
 
-This personalization aims to improve search relevance, reduce time spent finding information, and provide a more satisfying user experience.
+The goal is to improve search quality while keeping personalization visible and user-controlled.
 
 ---
 
 ## Tech Stack Overview
 
-- **React** – Component-based library for building responsive, dynamic web interfaces.
-- **Vite** – Lightweight build tool for fast development and hot module reloading.
+* **React** – Component-based frontend for building responsive, modular user interfaces  
+* **Vite** – Fast development tooling with hot module reloading  
+* **FastAPI (Python)** – Backend API for authentication, orchestration, and LLM integration  
+* **Uvicorn** – ASGI server for running the FastAPI backend  
+* **MongoDB** – Flexible storage for user profiles, queries, and interaction logs  
 
-These choices allow for quick prototyping of the frontend while keeping it modular, responsive, and easy to style.  
-The backend uses **Python** with **FastAPI** for a simple, performant API and **MongoDB** for storing user data.
-
----
+This stack supports rapid prototyping while remaining scalable, modular, and well-suited for AI-driven personalization.
 
 ## Project Structure
 

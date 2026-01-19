@@ -151,7 +151,7 @@ export default function SettingsPage() {
                                 }}
                             >
                                 <option value="clarify_only">
-                                    Conservative (clarify only)
+                                    Conservative (only clarify intent using interests)
                                 </option>
                                 <option value="clarify_and_personalize">
                                     Personalized (use strong interests to resolve ambiguity)

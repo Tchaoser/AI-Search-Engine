@@ -34,21 +34,27 @@ class QueryCache:
         self._store: Dict[str, Tuple[str, float]] = {}
 
     def _make_key(
-            self, query: str, model: str, temp: float, semantic_mode: str, verbosity: str
+            self,
+            query: str,
+            model: str,
+            temp: float,
+            semantic_mode: str,
+            verbosity: str,
+            profile_rev: int = 0,
     ) -> str:
         norm_query = _normalize_query(query)
         sem_mode = (semantic_mode or "clarify_only").lower()
         verb = (verbosity or "medium").lower()
-        return f"{model}:{temp:.3f}:{sem_mode}:{verb}:{norm_query}"
+        return f"{model}:{temp:.3f}:{sem_mode}:{verb}:rev{profile_rev}:{norm_query}"
 
     def get(
-            self, query: str, model: str, temp: float, semantic_mode: str, verbosity: str
+            self, query: str, model: str, temp: float, semantic_mode: str, verbosity: str, profile_rev: int
     ) -> Optional[str]:
         if not self.ttl:
             logger.info("[Cache] Disabled (TTL=0)")
             return None
 
-        key = self._make_key(query, model, temp, semantic_mode, verbosity)
+        key = self._make_key(query, model, temp, semantic_mode, verbosity, profile_rev)
         item = self._store.get(key)
 
         if not item:
@@ -69,13 +75,13 @@ class QueryCache:
         return value
 
     def set(
-            self, query: str, model: str, temp: float, semantic_mode: str, verbosity: str, expanded: str
+            self, query: str, model: str, temp: float, semantic_mode: str, verbosity: str, expanded: str, profile_rev: int
     ) -> None:
         if not self.ttl:
             logger.info("[Cache] Skipped write (TTL=0)")
             return
 
-        key = self._make_key(query, model, temp, semantic_mode, verbosity)
+        key = self._make_key(query, model, temp, semantic_mode, verbosity, profile_rev)
         self._store[key] = (expanded, time.time())
         logger.info("[Cache] STORED expansion for key='%s'", key)
 

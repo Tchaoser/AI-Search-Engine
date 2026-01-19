@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useReducer, useCallback, useEffect } from "react";
-import "./notifications.css";
 
 const NotificationContext = createContext(null);
 
@@ -31,11 +30,15 @@ export function NotificationProvider({ children }) {
     const notify = useCallback(({ type = "info", title = "", message = "", duration = DEFAULT_DURATION }) => {
         const id = makeId();
         const toast = { id, type, title, message, duration };
+
+        console.log("[TOAST] notify() called →", toast);
+
         dispatch({ type: "PUSH", payload: toast });
 
         // return id so callers can manually remove if needed
         return id;
     }, []);
+
 
     const remove = useCallback((id) => dispatch({ type: "REMOVE", id }), []);
     const clear = useCallback(() => dispatch({ type: "CLEAR" }), []);

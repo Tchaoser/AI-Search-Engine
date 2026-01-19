@@ -62,10 +62,10 @@ MAX_USER_PROMPT_CHARS = int(os.getenv("SE_MAX_USER_PROMPT_CHARS", "600"))
 SYSTEM_PROMPT_CLARIFY_ONLY = (
     "Expand the user's query into a Google search–optimized query. "
     "Use concise keyword-style phrasing, not full sentences. "
-    "Preserve the user's original topic and breadth; do NOT narrow, reinterpret, "
-    "or resolve ambiguity using user interests. "
+    "Preserve the user's original topic and breadth; do NOT narrow, reinterpret, or resolve ambiguity using user interests. "
     "If the query has multiple common interpretations, retain all major interpretations. "
     "Add only widely accepted retrieval signals when they clearly match the user's intent. "
+    "If the query contains comparative or superlative terms (e.g., best, top, greatest, worst), include common list/ranking signals such as: list, ranking, top, greatest, or ‘of all time’"
     "Parentheses may be used ONLY for common aliases or abbreviations. "
     "Do NOT add examples, explanations, stylistic descriptions, or exclusions. "
     "Do NOT mention unrelated domains, even negatively. "
@@ -78,16 +78,17 @@ SYSTEM_PROMPT_CLARIFY_AND_PERSONALIZE = (
     "Expand the user's query into a Google search–optimized query. "
     "Use concise keyword-style phrasing, not full sentences. "
     "Preserve the user's original topic and intent. "
-    "If the query is ambiguous and has multiple reasonable interpretations, "
-    "strong user interests may be used to resolve the ambiguity toward the most "
-    "personally relevant interpretation. "
+    "If the query is ambiguous and has multiple reasonable interpretations, strong user interests may be used to resolve the ambiguity toward the most personally relevant interpretation. "
     "Add only widely accepted retrieval signals when they clearly match the user's intent. "
+    "If the query contains comparative or superlative terms (e.g., best, top, greatest, worst), include common list/ranking signals such as: list, ranking, top, greatest, or ‘of all time’"
     "Parentheses may be used ONLY for common aliases or abbreviations. "
     "Do NOT add examples, explanations, stylistic descriptions, or exclusions. "
     "Do NOT mention unrelated domains, even negatively. "
     "User interests must never introduce unrelated concepts. "
     "Return ONLY the expanded query as a single line."
 )
+
+#TODO: Certain query types could benefit from a backend safety net, eg. guarantee list intent survives with expanded = f"{expanded} top list ranking"
 
 # -----------------------
 # Normalize and Truncate
@@ -422,8 +423,17 @@ async def expand_query(
         logger.warning("expand_query called with empty seed.")
         return seed
 
+    profile_rev = 0
+    if user_id:
+        prof = user_profiles_col.find_one(
+            {"user_id": user_id},
+            {"profile_revision": 1}
+        )
+        if prof:
+            profile_rev = int(prof.get("profile_revision", 0))
+
     # 1) Cache check
-    cached = query_cache.get(seed, OLLAMA_MODEL, OLLAMA_TEMP, semantic_mode, verbosity)
+    cached = query_cache.get(seed, OLLAMA_MODEL, OLLAMA_TEMP, semantic_mode, verbosity, profile_rev)
     if cached:
         logger.debug("Query expansion cache hit", extra={"original": seed, "expanded": cached})
         return cached
@@ -528,7 +538,7 @@ async def expand_query(
 
     # 4) Cache result (even if identical to seed)
     try:
-        query_cache.set(seed, OLLAMA_MODEL, OLLAMA_TEMP, semantic_mode, verbosity, expanded)
+        query_cache.set(seed, OLLAMA_MODEL, OLLAMA_TEMP, semantic_mode, verbosity, expanded, profile_rev)
         logger.debug(
             "Query expansion complete",
             extra={"original": seed, "expanded": expanded, "same": seed == expanded},

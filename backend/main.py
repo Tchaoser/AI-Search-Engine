@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.auth_routes import router as auth_router
 from api.search_routes import router as search_router
 from api.profile_routes import router as profile_router
+from api.setting_routes import router as settings_router
 from background_tasks.background_tasks import start_background_tasks, stop_background_tasks
 from services.logger import AppLogger
 
@@ -29,6 +30,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(search_router)
 app.include_router(profile_router)
+app.include_router(settings_router)
 
 
 # Background tasks lifecycle

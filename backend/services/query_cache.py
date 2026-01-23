@@ -8,6 +8,7 @@ CACHE_TTL_SECONDS = int(os.getenv("QUERY_CACHE_TTL", "3600"))  # default: 1 hour
 logger = logging.getLogger(__name__)
 if not logger.handlers:
     import sys
+
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -24,27 +25,36 @@ def _normalize_query(q: str) -> str:
 class QueryCache:
     """
     In-memory cache for semantic expansions.
-
-    Why caching helps:
-    - Avoids repeated LLM calls for common queries (major speedup).
-    - Reduces cost and CPU load on Ollama.
-    - Allows instant replays during debugging or UI reloads.
+    Cache key now includes semantic_mode and verbosity to avoid returning
+    expansions generated under different settings.
     """
 
     def __init__(self, ttl: int = CACHE_TTL_SECONDS):
         self.ttl = ttl
         self._store: Dict[str, Tuple[str, float]] = {}
 
-    def _make_key(self, query: str, model: str, temp: float) -> str:
-        norm = _normalize_query(query)
-        return f"{model}:{temp:.3f}:{norm}"
+    def _make_key(
+            self,
+            query: str,
+            model: str,
+            temp: float,
+            semantic_mode: str,
+            verbosity: str,
+            profile_rev: int = 0,
+    ) -> str:
+        norm_query = _normalize_query(query)
+        sem_mode = (semantic_mode or "clarify_only").lower()
+        verb = (verbosity or "medium").lower()
+        return f"{model}:{temp:.3f}:{sem_mode}:{verb}:rev{profile_rev}:{norm_query}"
 
-    def get(self, query: str, model: str, temp: float) -> Optional[str]:
+    def get(
+            self, query: str, model: str, temp: float, semantic_mode: str, verbosity: str, profile_rev: int
+    ) -> Optional[str]:
         if not self.ttl:
             logger.info("[Cache] Disabled (TTL=0)")
             return None
 
-        key = self._make_key(query, model, temp)
+        key = self._make_key(query, model, temp, semantic_mode, verbosity, profile_rev)
         item = self._store.get(key)
 
         if not item:
@@ -64,12 +74,14 @@ class QueryCache:
         logger.info("[Cache] HIT for key='%s' (age=%.1fs)", key, age)
         return value
 
-    def set(self, query: str, model: str, temp: float, expanded: str) -> None:
+    def set(
+            self, query: str, model: str, temp: float, semantic_mode: str, verbosity: str, expanded: str, profile_rev: int
+    ) -> None:
         if not self.ttl:
             logger.info("[Cache] Skipped write (TTL=0)")
             return
 
-        key = self._make_key(query, model, temp)
+        key = self._make_key(query, model, temp, semantic_mode, verbosity, profile_rev)
         self._store[key] = (expanded, time.time())
         logger.info("[Cache] STORED expansion for key='%s'", key)
 

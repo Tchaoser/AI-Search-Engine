@@ -5,6 +5,8 @@ from services.logger import AppLogger
 
 logger = AppLogger.get_logger(__name__)
 
+RERANK_TOP_N = 5  # only re-rank the top N Google results
+
 
 def _score_result(result: dict, profile: dict):
     """
@@ -21,7 +23,10 @@ def _score_result(result: dict, profile: dict):
 
     # interpret profile interests
     implicit = profile.get("implicit_interests", {}) if profile else {}
-    explicit = {e["keyword"].lower(): e.get("weight", 1.0) for e in (profile.get("explicit_interests", []) if profile else [])}
+    explicit = {
+        e["keyword"].lower(): e.get("weight", 1.0)
+        for e in (profile.get("explicit_interests", []) if profile else [])
+    }
 
     # domain boost
     dom = normalize_url(link)
@@ -39,23 +44,22 @@ def _score_result(result: dict, profile: dict):
 
 def search(query: str, user_id: str = None):
     """
-    Search pipeline: proxies to Google Custom Search, then applies personalization/reranking
-    using the user's cached profile if available.
-    
-    Returns a list of results ordered by personalized score.
+    Search pipeline:
+    - proxy to Google Custom Search
+    - optionally re-rank ONLY the top N results using the user's profile
     """
     logger.debug("Search initiated", extra={
         "user_id": user_id,
         "query": query
     })
-    
+
     results = search_google(query)
     logger.debug("Google API results received", extra={
         "query": query,
         "result_count": len(results)
     })
 
-    # If no user_id provided, skip personalization
+    # No personalization without a user
     if not user_id:
         logger.debug("Skipping personalization: no user_id", extra={"query": query})
         return results
@@ -74,20 +78,28 @@ def search(query: str, user_id: str = None):
         logger.debug("No profile found, returning unranked results", extra={"user_id": user_id})
         return results
 
-    # Assign base rank score (higher for earlier results)
+    # Split results into head (to rerank) and tail (leave untouched)
+    head = results[:RERANK_TOP_N]
+    tail = results[RERANK_TOP_N:]
+
     scored = []
-    for idx, r in enumerate(results):
-        # base positional score: inverse of rank (1-based)
-        pos_score = max(0.0, (len(results) - idx)) / max(1.0, len(results))
+    for idx, r in enumerate(head):
+        # positional bias within head only
+        pos_score = max(0.0, (len(head) - idx)) / max(1.0, len(head))
         personal_score = _score_result(r, profile)
         total = pos_score + personal_score
         scored.append((total, r))
 
     # sort by total descending
     scored.sort(key=lambda x: -x[0])
-    reranked_results = [r for (_s, r) in scored]
-    logger.debug("Results re-ranked using user profile", extra={
+    reranked_head = [r for (_s, r) in scored]
+
+    final_results = reranked_head + tail
+
+    logger.debug("Top-N results re-ranked using user profile", extra={
         "user_id": user_id,
-        "result_count": len(reranked_results)
+        "reranked_count": len(reranked_head),
+        "total_results": len(final_results)
     })
-    return reranked_results
+
+    return final_results

@@ -10,6 +10,7 @@ export default function SettingsPage() {
     const [useEnhancedQuery, setUseEnhancedQuery] = useState(true);
     const [verbosity, setVerbosity] = useState("medium");
     const [loading, setLoading] = useState(false);
+    const [semanticMode, setSemanticMode] = useState("clarify_only");
 
     //  LOAD SETTINGS 
     const loadSettings = useCallback(() => {
@@ -23,7 +24,6 @@ export default function SettingsPage() {
                 console.warn("Could not load settings, using defaults");
             });
     }, [userId]);
-
     useEffect(() => {
         loadSettings();
     }, [loadSettings]);
@@ -49,6 +49,12 @@ export default function SettingsPage() {
         updateSettings({ verbosity: e.target.value });
     };
 
+    const handleSemanticModeChange = (e) => {
+        const value = e.target.value;
+        setSemanticMode(value);
+        localStorage.setItem("semanticMode", value);
+    };
+
     return (
         <div className="container settings-page">
             <h1 className="settings-title">Settings</h1>
@@ -61,11 +67,8 @@ export default function SettingsPage() {
                 {/* Semantic Expansion Toggle */}
                 <div className="settings-row">
                     <div className="settings-left">
-                        <label
-                            className="settings-label"
-                            id="enhanced-query-label"
-                        >
-                            Use Enhanced Query
+                        <label className="settings-label" id="enhanced-query-label">
+                            <strong>Use Enhanced Query</strong>
                         </label>
                         <p
                             className="settings-description"
@@ -98,14 +101,11 @@ export default function SettingsPage() {
                 {useEnhancedQuery && (
                     <div className="settings-row" style={{ marginTop: "1.5rem" }}>
                         <div className="settings-left">
-                            <label
-                                className="settings-label"
-                                htmlFor="verbosity-select"
-                            >
-                                Personalization Verbosity
+                            <label className="settings-label" htmlFor="verbosity-select">
+                                <strong>Personalization Verbosity</strong>
                             </label>
                             <p className="settings-description">
-                                Controls how strongly your interests influence semantic expansion
+                                Controls how many of your interests influence semantic expansion
                             </p>
                         </div>
 
@@ -125,6 +125,44 @@ export default function SettingsPage() {
                         </div>
                     </div>
                 )}
+                {/* Semantic Mode Selector */}
+                {useEnhancedQuery && (
+                    <div className="settings-row" style={{ marginTop: "1.5rem" }}>
+                        <div className="settings-left">
+                            <label className="settings-label" htmlFor="semantic-mode-select">
+                                <strong>Query Interpretation Mode</strong>
+                            </label>
+                            <p className="settings-description">
+                                Determines whether strong interests may resolve ambiguous queries
+                            </p>
+                        </div>
+
+                        <div className="dropdown" style={{ width: "320px" }}>
+                            <select
+                                id="semantic-mode-select"
+                                className="settings-select"
+                                value={semanticMode}
+                                onChange={handleSemanticModeChange}
+                                style={{
+                                    width: "100%",
+                                    padding: "0.5rem",
+                                    borderRadius: "0.5rem",
+                                    border: "1px solid #cbd5e1",
+                                    background: "white",
+                                    cursor: "pointer",
+                                }}
+                            >
+                                <option value="clarify_only">
+                                    Conservative (only clarify intent using interests)
+                                </option>
+                                <option value="clarify_and_personalize">
+                                    Personalized (use strong interests to resolve ambiguity)
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                )}
+
             </div>
         </div>
     );

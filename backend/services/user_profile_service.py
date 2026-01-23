@@ -27,7 +27,7 @@ STOP_WORDS = {
     # domain-specific / low-value tokens often seen in queries
     "search", "query", "queries", "result", "results", "page", "pages", "link", "links", "click",
     "clicks", "test", "example", "info", "information", "article", "articles", "howto", "tutorial",
-    "http", "https", "www", "com", "org", "net", "io", "gov", "edu", "amp", "amphtml"
+    "http", "https", "www", "com", "org", "net", "io", "gov", "edu", "amp", "amphtml", "best"
 }
 
 
@@ -265,6 +265,7 @@ def build_user_profile(user_id: str,
         and k.lower() not in explicit_set
     }
 
+    prev_rev = int(existing_profile.get("profile_revision", 0))
     profile_doc = {
         "user_id": user_id,
         "implicit_interests": dict(sorted(filtered_interests.items(), key=lambda x: -x[1])),
@@ -273,6 +274,7 @@ def build_user_profile(user_id: str,
         "last_updated": datetime.utcnow().isoformat(),
         "explicit_interests": explicit_interests,
         "implicit_exclusions": implicit_exclusions_raw,
+        "profile_revision": prev_rev + 1,
         "embedding": None
     }
 

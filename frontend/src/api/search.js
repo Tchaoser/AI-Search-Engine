@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getAuthHeaders, clearCurrentUser } from "../auth/auth.js";
+import {getAuthHeaders, clearCurrentUser} from "../auth/auth.js";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -15,19 +15,20 @@ const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
  * - Always sent to backend, but backend may ignore it if useEnhanced=false
  */
 export async function searchQuery(query, useEnhanced = true) {
-    const verbosity =
-        localStorage.getItem("semanticVerbosity") || "medium";
+    const verbosity = localStorage.getItem("semanticVerbosity") || "medium";
+    const semanticMode = localStorage.getItem("semanticMode") || "clarify_only";
 
     const url =
         `${API_BASE}/search` +
         `?q=${encodeURIComponent(query)}` +
         `&use_enhanced=${useEnhanced}` +
-        `&verbosity=${encodeURIComponent(verbosity)}`;
+        `&verbosity=${encodeURIComponent(verbosity)}` +
+        `&semantic_mode=${encodeURIComponent(semanticMode)}`;
 
     const headers = getAuthHeaders();
 
     try {
-        const res = await axios.get(url, { headers });
+        const res = await axios.get(url, {headers});
         return res.data;
     } catch (err) {
         if (err?.response?.status === 401) {
@@ -42,15 +43,15 @@ export async function searchQuery(query, useEnhanced = true) {
     }
 }
 
-export async function logClick({ user_id, query_id, clicked_url, rank }) {
+export async function logClick({user_id, query_id, clicked_url, rank}) {
     const url = `${API_BASE}/interactions`;
-    const headers = { "Content-Type": "application/json", ...getAuthHeaders() };
+    const headers = {"Content-Type": "application/json", ...getAuthHeaders()};
     // If you pass user_id in the body it will be ignored if there's a logged-in user.
     try {
         await axios.post(
             url,
-            { user_id, query_id, clicked_url, rank },
-            { headers }
+            {user_id, query_id, clicked_url, rank},
+            {headers}
         );
     } catch (err) {
         if (err?.response?.status === 401) {
@@ -72,14 +73,14 @@ export async function logFeedback({
                                       is_relevant,
                                   }) {
     const url = `${API_BASE}/feedback`;
-    const headers = { "Content-Type": "application/json", ...getAuthHeaders() };
+    const headers = {"Content-Type": "application/json", ...getAuthHeaders()};
     // If you pass user_id in the body it will be ignored if there's a logged-in users.
     try {
         //basically identical to logClick
         await axios.post(
             url,
-            { user_id, query_id, result_url, rank, is_relevant },
-            { headers }
+            {user_id, query_id, result_url, rank, is_relevant},
+            {headers}
         );
     } catch (err) {
         if (err?.response?.status === 401) {

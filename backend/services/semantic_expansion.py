@@ -378,7 +378,7 @@ def _strip_wrapping_quotes(text: str) -> str:
 # -----------------------
 async def expand_query(
         seed: str,
-        user_id: Optional[str] = None,
+        user_id: str,
         verbosity: str = "medium",
         semantic_mode: str = "clarify_only",
 ) -> str:
@@ -433,7 +433,7 @@ async def expand_query(
             profile_rev = int(prof.get("profile_revision", 0))
 
     # 1) Cache check
-    cached = query_cache.get(seed, OLLAMA_MODEL, OLLAMA_TEMP, semantic_mode, verbosity, profile_rev)
+    cached = query_cache.get(user_id, seed, OLLAMA_MODEL, OLLAMA_TEMP, semantic_mode, verbosity, profile_rev)
     if cached:
         logger.debug("Query expansion cache hit", extra={"original": seed, "expanded": cached})
         return cached
@@ -538,7 +538,7 @@ async def expand_query(
 
     # 4) Cache result (even if identical to seed)
     try:
-        query_cache.set(seed, OLLAMA_MODEL, OLLAMA_TEMP, semantic_mode, verbosity, expanded, profile_rev)
+        query_cache.set(user_id, seed, OLLAMA_MODEL, OLLAMA_TEMP, semantic_mode, verbosity, expanded, profile_rev)
         logger.debug(
             "Query expansion complete",
             extra={"original": seed, "expanded": expanded, "same": seed == expanded},

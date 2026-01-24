@@ -25,8 +25,13 @@ def _normalize_query(q: str) -> str:
 class QueryCache:
     """
     In-memory cache for semantic expansions.
-    Cache key now includes semantic_mode and verbosity to avoid returning
-    expansions generated under different settings.
+    Cache keys are namespaced by user_id to prevent cross-account
+    data leakage. Cache is cleared on logout.
+
+    Why caching helps:
+    - Avoids repeated LLM calls for common queries (major speedup).
+    - Reduces cost and CPU load on Ollama.
+    - Allows instant replays during debugging or UI reloads.
     """
 
     def __init__(self, ttl: int = CACHE_TTL_SECONDS):
@@ -35,6 +40,7 @@ class QueryCache:
 
     def _make_key(
             self,
+            user_id: str,
             query: str,
             model: str,
             temp: float,
@@ -45,45 +51,77 @@ class QueryCache:
         norm_query = _normalize_query(query)
         sem_mode = (semantic_mode or "clarify_only").lower()
         verb = (verbosity or "medium").lower()
-        return f"{model}:{temp:.3f}:{sem_mode}:{verb}:rev{profile_rev}:{norm_query}"
+
+        return (
+            f"{user_id}:"
+            f"{model}:"
+            f"{temp:.3f}:"
+            f"{sem_mode}:"
+            f"{verb}:"
+            f"rev{profile_rev}:"
+            f"{norm_query}"
+        )
+
+    def clear(self) -> None:
+        size = len(self._store)
+        logger.info("[Cache] CleARED %d entries", size)
+        self._store.clear()
 
     def get(
-            self, query: str, model: str, temp: float, semantic_mode: str, verbosity: str, profile_rev: int
+            self,
+            user_id: str,
+            query: str,
+            model: str,
+            temp: float,
+            semantic_mode: str,
+            verbosity: str,
+            profile_rev: int = 0,
     ) -> Optional[str]:
         if not self.ttl:
             logger.info("[Cache] Disabled (TTL=0)")
             return None
 
-        key = self._make_key(query, model, temp, semantic_mode, verbosity, profile_rev)
-        item = self._store.get(key)
+        key = self._make_key(
+            user_id, query, model, temp, semantic_mode, verbosity, profile_rev
+        )
 
+        item = self._store.get(key)
         if not item:
             logger.info("[Cache] MISS for key='%s'", key)
             return None
 
         value, ts = item
         age = time.time() - ts
+
         if age > self.ttl:
             logger.info(
-                "[Cache] EXPIRED entry for key='%s' (age=%.1fs > ttl=%ds), removing.",
+                "[Cache] EXPIRED key='%s' (age=%.1fs > ttl=%ds)",
                 key, age, self.ttl
             )
             self._store.pop(key, None)
             return None
 
-        logger.info("[Cache] HIT for key='%s' (age=%.1fs)", key, age)
+        logger.info("[Cache] HIT key='%s' (age=%.1fs)", key, age)
         return value
-
     def set(
-            self, query: str, model: str, temp: float, semantic_mode: str, verbosity: str, expanded: str, profile_rev: int
+            self,
+            user_id: str,
+            query: str,
+            model: str,
+            temp: float,
+            semantic_mode: str,
+            verbosity: str,
+            expanded: str,
+            profile_rev: int = 0,
     ) -> None:
         if not self.ttl:
             logger.info("[Cache] Skipped write (TTL=0)")
             return
 
-        key = self._make_key(query, model, temp, semantic_mode, verbosity, profile_rev)
-        self._store[key] = (expanded, time.time())
-        logger.info("[Cache] STORED expansion for key='%s'", key)
+        self.key = self._make_key(user_id, query, model, temp, semantic_mode, verbosity, profile_rev)
+        key = self.key
 
+        self._store[key] = (expanded, time.time())
+        logger.info("[Cache] STORED key='%s'", key)
 
 query_cache = QueryCache()

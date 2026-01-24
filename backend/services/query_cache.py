@@ -83,8 +83,4 @@ class QueryCache:
         self._store[key] = (expanded, time.time())
         logger.info("[Cache] STORED expansion for key='%s'", key)
 
-def on_user_logout(user_id: str):
-    logger.info("User '%s' logging out — clearing query cache", user_id)
-    query_cache.clear()
-
 query_cache = QueryCache()

@@ -58,16 +58,32 @@ export default function UserProfilePage() {
     const saveWeights = async () => {
         setLoadingSave(true);
         try {
-            await fetch(`${API_URL}/profiles/explicit/bulk_update`, {
+            const res = await fetch(`${API_URL}/profiles/explicit/bulk_update`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ user_id: userId, updates: explicitInterests })
             });
+
+            if (!res.ok) throw new Error("Save failed");
+
+            notify({
+                type: "success",
+                title: "Saved",
+                message: "Explicit interests updated"
+            });
+
             loadProfile();
+        } catch (err) {
+            notify({
+                type: "error",
+                title: "Save failed",
+                message: "Could not update explicit interests"
+            });
         } finally {
             setLoadingSave(false);
         }
     };
+
 
     return (
         <div className="profile-page container">

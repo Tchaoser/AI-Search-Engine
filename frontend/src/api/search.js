@@ -14,7 +14,7 @@ async function getUserSettings() {
         return res.data;
     } catch (err) {
         console.warn("Failed to fetch user settings, using defaults", err);
-        return { use_enhanced_query: true, verbosity: "medium" };
+        return { use_enhanced_query: true, verbosity: "medium", semantic_mode: "clarify_only" };
     }
 }
 
@@ -31,7 +31,7 @@ export async function searchQuery(query) {
         `?q=${encodeURIComponent(query)}` +
         `&use_enhanced=${settings.use_enhanced_query}` +
         `&verbosity=${encodeURIComponent(settings.verbosity)}` +
-        `&semantic_mode=${encodeURIComponent(settings.semanticMode)}`;
+        `&semantic_mode=${encodeURIComponent(settings.semantic_mode)}`;
 
     const headers = getAuthHeaders();
 

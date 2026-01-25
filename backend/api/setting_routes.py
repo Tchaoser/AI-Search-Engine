@@ -8,7 +8,7 @@ router = APIRouter()
 DEFAULT_SETTINGS = {
     "use_enhanced_query": True,
     "verbosity": "medium",
-    "semanticMode": "clarify_only",
+    "semantic_mode": "clarify_only",
 }
 
 # User resolution

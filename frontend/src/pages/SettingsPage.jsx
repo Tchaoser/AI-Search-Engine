@@ -19,6 +19,7 @@ export default function SettingsPage() {
             .then(settings => {
                 setUseEnhancedQuery(settings.use_enhanced_query ?? true);
                 setVerbosity(settings.verbosity ?? "medium");
+                setSemanticMode(settings.semantic_mode ?? "clarify_only");
             })
             .catch(() => {
                 console.warn("Could not load settings, using defaults");
@@ -50,9 +51,7 @@ export default function SettingsPage() {
     };
 
     const handleSemanticModeChange = (e) => {
-        const value = e.target.value;
-        setSemanticMode(value);
-        localStorage.setItem("semanticMode", value);
+        updateSettings({ semantic_mode: e.target.value });
     };
 
     return (

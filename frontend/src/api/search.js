@@ -4,26 +4,34 @@ import {getAuthHeaders, clearCurrentUser} from "../auth/auth.js";
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 /**
- * Perform a search query.
+ * Fetch the current user's settings from the backend.
+ * Falls back to defaults if the request fails.
+ */
+async function getUserSettings() {
+    const headers = getAuthHeaders();
+    try {
+        const res = await axios.get(`${API_BASE}/user/settings`, { headers });
+        return res.data;
+    } catch (err) {
+        console.warn("Failed to fetch user settings, using defaults", err);
+        return { use_enhanced_query: true, verbosity: "medium", semantic_mode: "clarify_only" };
+    }
+}
+
+/**
+ * Perform a search query using the user's current settings.
  *
  * @param {string} query - The raw user query
- * @param {boolean} useEnhanced - Whether semantic expansion is enabled
- *
- * Verbosity behavior:
- * - Pulled from localStorage key: "semanticVerbosity"
- * - Defaults to "medium" if unset
- * - Always sent to backend, but backend may ignore it if useEnhanced=false
  */
-export async function searchQuery(query, useEnhanced = true) {
-    const verbosity = localStorage.getItem("semanticVerbosity") || "medium";
-    const semanticMode = localStorage.getItem("semanticMode") || "clarify_only";
 
+export async function searchQuery(query) {
+    const settings = await getUserSettings();
     const url =
         `${API_BASE}/search` +
         `?q=${encodeURIComponent(query)}` +
-        `&use_enhanced=${useEnhanced}` +
-        `&verbosity=${encodeURIComponent(verbosity)}` +
-        `&semantic_mode=${encodeURIComponent(semanticMode)}`;
+        `&use_enhanced=${settings.use_enhanced_query}` +
+        `&verbosity=${encodeURIComponent(settings.verbosity)}` +
+        `&semantic_mode=${encodeURIComponent(settings.semantic_mode)}`;
 
     const headers = getAuthHeaders();
 

@@ -1,38 +1,57 @@
-import React, { useState, useEffect } from "react";
+// src/pages/SettingsPage.jsx
+import React, { useState, useEffect, useCallback } from "react";
+import { getCurrentUserId } from "../auth/auth.js";
+
+const API_URL = "http://localhost:5000";
 
 export default function SettingsPage() {
+    const [userId] = useState(getCurrentUserId());
+
     const [useEnhancedQuery, setUseEnhancedQuery] = useState(true);
     const [verbosity, setVerbosity] = useState("medium");
+    const [loading, setLoading] = useState(false);
     const [semanticMode, setSemanticMode] = useState("clarify_only");
 
-    // Load from localStorage on mount
+    //  LOAD SETTINGS 
+    const loadSettings = useCallback(() => {
+        fetch(`${API_URL}/user/settings?user_id=${userId}`)
+            .then(res => res.ok ? res.json() : Promise.reject())
+            .then(settings => {
+                setUseEnhancedQuery(settings.use_enhanced_query ?? true);
+                setVerbosity(settings.verbosity ?? "medium");
+                setSemanticMode(settings.semantic_mode ?? "clarify_only");
+            })
+            .catch(() => {
+                console.warn("Could not load settings, using defaults");
+            });
+    }, [userId]);
     useEffect(() => {
-        const savedEnhanced = localStorage.getItem("useEnhancedQuery");
-        if (savedEnhanced !== null) {
-            setUseEnhancedQuery(JSON.parse(savedEnhanced));
-        }
+        loadSettings();
+    }, [loadSettings]);
 
-        const savedVerbosity = localStorage.getItem("semanticVerbosity");
-        if (savedVerbosity) {
-            setVerbosity(savedVerbosity);
-        }
+    //  UPDATE SETTINGS 
+    const updateSettings = (partial) => {
+        setLoading(true);
 
-        const savedMode = localStorage.getItem("semanticMode");
-        if (savedMode) {
-            setSemanticMode(savedMode);
-        }
-    }, []);
+        fetch(`${API_URL}/user/settings?user_id=${userId}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(partial),
+        })
+            .then(() => loadSettings())
+            .finally(() => setLoading(false));
+    };
+
+    const toggleEnhancedQuery = () => {
+        updateSettings({ use_enhanced_query: !useEnhancedQuery });
+    };
 
     const handleVerbosityChange = (e) => {
-        const value = e.target.value;
-        setVerbosity(value);
-        localStorage.setItem("semanticVerbosity", value);
+        updateSettings({ verbosity: e.target.value });
     };
 
     const handleSemanticModeChange = (e) => {
-        const value = e.target.value;
-        setSemanticMode(value);
-        localStorage.setItem("semanticMode", value);
+        updateSettings({ semantic_mode: e.target.value });
     };
 
     return (
@@ -44,14 +63,16 @@ export default function SettingsPage() {
             </p>
 
             <div className="settings-card">
-
                 {/* Semantic Expansion Toggle */}
                 <div className="settings-row">
                     <div className="settings-left">
                         <label className="settings-label" id="enhanced-query-label">
                             <strong>Use Enhanced Query</strong>
                         </label>
-                        <p className="settings-description" id="enhanced-query-desc">
+                        <p
+                            className="settings-description"
+                            id="enhanced-query-desc"
+                        >
                             Enable semantic query expansion to improve search results
                         </p>
                     </div>
@@ -63,27 +84,15 @@ export default function SettingsPage() {
                         aria-labelledby="enhanced-query-label"
                         aria-describedby="enhanced-query-desc"
                         tabIndex={0}
-                        onClick={() => {
-                            const newVal = !useEnhancedQuery;
-                            setUseEnhancedQuery(newVal);
-                            localStorage.setItem(
-                                "useEnhancedQuery",
-                                JSON.stringify(newVal)
-                            );
-                        }}
+                        onClick={toggleEnhancedQuery}
                         onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
                                 e.preventDefault();
-                                const newVal = !useEnhancedQuery;
-                                setUseEnhancedQuery(newVal);
-                                localStorage.setItem(
-                                    "useEnhancedQuery",
-                                    JSON.stringify(newVal)
-                                );
+                                toggleEnhancedQuery();
                             }
                         }}
                     >
-                        <div className="settings-switch-knob"></div>
+                        <div className="settings-switch-knob" />
                     </div>
                 </div>
 
@@ -104,15 +113,8 @@ export default function SettingsPage() {
                                 id="verbosity-select"
                                 className="settings-select"
                                 value={verbosity}
+                                disabled={loading}
                                 onChange={handleVerbosityChange}
-                                style={{
-                                    width: "100%",
-                                    padding: "0.5rem",
-                                    borderRadius: "0.5rem",
-                                    border: "1px solid #cbd5e1",
-                                    background: "white",
-                                    cursor: "pointer",
-                                }}
                             >
                                 <option value="off">Off</option>
                                 <option value="low">Low (strong interests only)</option>
@@ -122,7 +124,6 @@ export default function SettingsPage() {
                         </div>
                     </div>
                 )}
-
                 {/* Semantic Mode Selector */}
                 {useEnhancedQuery && (
                     <div className="settings-row" style={{ marginTop: "1.5rem" }}>

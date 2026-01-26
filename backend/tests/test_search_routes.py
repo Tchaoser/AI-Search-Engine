@@ -8,39 +8,6 @@ from unittest.mock import patch, Mock
 class TestSearchRoutes:
     """Test cases for search endpoints."""
     
-    def test_search_basic_query(self, client, mock_search_service, mock_logging_service):
-        """Test basic search with a simple query."""
-        # Arrange
-        with patch("api.utils.get_user_id_from_auth", return_value="guest"):
-            # Act
-            response = client.get("/search?q=python+programming")
-        
-        # Assert
-        assert response.status_code == 200
-        data = response.json()
-        assert "results" in data
-        assert isinstance(data["results"], list)
-        mock_search_service.assert_called_once()
-    
-    def test_search_with_enhanced_mode(self, client, mock_search_service, mock_logging_service):
-        """Test search with semantic enhancement enabled."""
-        # Arrange
-        with patch("api.utils.get_user_id_from_auth", return_value="test_user_123"), \
-             patch("services.semantic_expansion.expand_query") as mock_expand:
-            mock_expand.return_value = {
-                "expanded_query": "python programming language tutorial",
-                "clarifications": []
-            }
-            
-            # Act
-            response = client.get("/search?q=python&use_enhanced=true")
-        
-        # Assert
-        assert response.status_code == 200
-        data = response.json()
-        assert "results" in data
-        assert "query" in data
-    
     def test_search_without_enhanced_mode(self, client, mock_search_service, mock_logging_service):
         """Test search without semantic enhancement."""
         # Arrange

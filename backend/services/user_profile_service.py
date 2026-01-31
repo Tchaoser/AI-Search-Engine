@@ -1,6 +1,6 @@
 import os
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import re
 import math
 from urllib.parse import urlparse
@@ -87,7 +87,7 @@ def _parse_iso(ts: str) -> datetime:
     try:
         return datetime.fromisoformat(ts)
     except Exception:
-        return datetime.utcnow()
+        return datetime.now(timezone.utc)
 
 
 def aggregate_queries(user_id: str,
@@ -119,7 +119,7 @@ def aggregate_queries(user_id: str,
     current_session = []
     last_ts = None
     for doc in docs_sorted:
-        ts = _parse_iso(doc.get("timestamp", datetime.utcnow().isoformat()))
+        ts = _parse_iso(doc.get("timestamp", datetime.now(timezone.utc).isoformat()))
         if last_ts is None:
             current_session = [(doc, ts)]
         else:
@@ -135,7 +135,7 @@ def aggregate_queries(user_id: str,
 
     token_scores = defaultdict(float)
     token_seen = set()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     session_cutoff = now - timedelta(minutes=session_decay_minutes)
 
     for session in sessions:
@@ -179,13 +179,13 @@ def aggregate_clicks(user_id: str, recency_decay_days: float = 30.0, session_dec
     if not docs:
         return {}
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     session_cutoff = now - timedelta(minutes=session_decay_minutes)
     
     for doc in docs:
         domain = normalize_url(doc.get("clicked_url", ""))
         rank = doc.get("rank", 1) or 1
-        ts = _parse_iso(doc.get("timestamp", datetime.utcnow().isoformat()))
+        ts = _parse_iso(doc.get("timestamp", datetime.now(timezone.utc).isoformat()))
         age_days = (now - ts).total_seconds() / 86400.0
         recency_mult = math.exp(- (age_days / max(1.0, recency_decay_days)))
 
@@ -271,7 +271,7 @@ def build_user_profile(user_id: str,
         "implicit_interests": dict(sorted(filtered_interests.items(), key=lambda x: -x[1])),
         "query_history": query_history,
         "click_history": list(clicks_scores.keys()),
-        "last_updated": datetime.utcnow().isoformat(),
+        "last_updated": datetime.now(timezone.utc).isoformat(),
         "explicit_interests": explicit_interests,
         "implicit_exclusions": implicit_exclusions_raw,
         "profile_revision": prev_rev + 1,
@@ -294,7 +294,7 @@ def build_user_profile(user_id: str,
         raise
 
     # Persist discarded tokens counts for later analysis
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     for token, cnt in discarded_counter.items():
         if not token:
             continue

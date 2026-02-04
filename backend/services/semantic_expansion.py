@@ -25,6 +25,7 @@ from __future__ import annotations
 import os
 import re
 from typing import Dict, List, Optional, Tuple
+from services.interest_selection import select_interests
 
 import httpx
 import unicodedata
@@ -296,28 +297,28 @@ def _extract_implicit(profile: dict) -> Dict[str, float]:
     return out
 
 
-# -----------------------
-# Top-K selection
-# -----------------------
-def _select_top_k(explicit: Dict[str, float], implicit: Dict[str, float]) -> Tuple[List[str], List[str]]:
-    """
-    Independently select top-K explicit and top-K implicit interests.
+# # -----------------------
+# # Top-K selection
+# # -----------------------
+# def _select_top_k(explicit: Dict[str, float], implicit: Dict[str, float]) -> Tuple[List[str], List[str]]:
+#     """
+#     Independently select top-K explicit and top-K implicit interests.
 
-    Returns:
-      (top_explicit_keywords, top_implicit_keywords) — each list ordered by
-      descending score (highest first). If there are fewer than K items, returns
-      whatever is available.
-    """
-    explicit_sorted = sorted(explicit.items(), key=lambda kv: kv[1], reverse=True)
-    implicit_sorted = sorted(implicit.items(), key=lambda kv: kv[1], reverse=True)
+#     Returns:
+#       (top_explicit_keywords, top_implicit_keywords) — each list ordered by
+#       descending score (highest first). If there are fewer than K items, returns
+#       whatever is available.
+#     """
+#     explicit_sorted = sorted(explicit.items(), key=lambda kv: kv[1], reverse=True)
+#     implicit_sorted = sorted(implicit.items(), key=lambda kv: kv[1], reverse=True)
 
-    top_explicit = [kw for kw, _ in explicit_sorted[:TOP_K_EXPLICIT]]
-    top_implicit = [kw for kw, _ in implicit_sorted[:TOP_K_IMPLICIT]]
+#     top_explicit = [kw for kw, _ in explicit_sorted[:TOP_K_EXPLICIT]]
+#     top_implicit = [kw for kw, _ in implicit_sorted[:TOP_K_IMPLICIT]]
 
-    logger.info("[Personalization] Top explicit (ordered): %s", top_explicit)
-    logger.info("[Personalization] Top implicit (ordered): %s", top_implicit)
+#     logger.info("[Personalization] Top explicit (ordered): %s", top_explicit)
+#     logger.info("[Personalization] Top implicit (ordered): %s", top_implicit)
 
-    return top_explicit, top_implicit
+#     return top_explicit, top_implicit
 
 
 # -----------------------
@@ -455,6 +456,13 @@ async def expand_query(
             if profile:
                 explicit_map = _extract_explicit(profile)
                 implicit_map = _extract_implicit(profile)
+
+                # NEW: apply selection (top_k vs hybrid via env) so K values actually matter
+                top_explicit, top_implicit = select_interests(
+                    explicit_map, implicit_map, TOP_K_EXPLICIT, TOP_K_IMPLICIT, user_id, seed
+                )
+                explicit_map = {k: explicit_map[k] for k in top_explicit if k in explicit_map}
+                implicit_map = {k: implicit_map[k] for k in top_implicit if k in implicit_map}
 
                 # Verbosity-based filtering
                 verbosity = (verbosity or "medium").lower()

@@ -8,7 +8,7 @@ up-to-date with session-aware weighting without blocking search requests.
 import os
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from services.db import queries_col, user_profiles_col
 from services.user_profile_service import build_user_profile
 from services.logger import AppLogger
@@ -68,7 +68,7 @@ class ProfileRebuildThread(threading.Thread):
                 return
             
             logger.info("Profile rebuild cycle starting", extra={"user_count": len(user_ids)})
-            start_time = datetime.utcnow()
+            start_time = datetime.now(timezone.utc)
             
             rebuilt_count = 0
             failed_count = 0
@@ -84,7 +84,7 @@ class ProfileRebuildThread(threading.Thread):
                         "error": str(e)
                     }, exc_info=False)
             
-            elapsed = (datetime.utcnow() - start_time).total_seconds()
+            elapsed = (datetime.now(timezone.utc) - start_time).total_seconds()
             logger.info("Profile rebuild cycle complete", extra={
                 "total_users": len(user_ids),
                 "rebuilt_count": rebuilt_count,

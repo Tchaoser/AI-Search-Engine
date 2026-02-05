@@ -35,6 +35,7 @@ backend/
 │  ├─ auth_routes.py               # Handles /auth/register and /auth/login endpoints
 │  ├─ search_routes.py             # Handles /search endpoint and click logging
 │  ├─ profile_routes.py            # Handles /profiles endpoints (explicit/implicit interests)
+|  ├─ setting_routes.py            # Handles /settings endpoints
 │  └─ utils.py                     # Helper functions, e.g., get_user_id_from_auth
 │
 ├─ models/
@@ -50,6 +51,7 @@ backend/
 │  ├─ logging_service.py           # Persists queries, clicks, and feedback events to MongoDB
 │  ├─ query_cache.py               # In-memory TTL cache for semantic query expansions
 │  ├─ search_service.py            # Search pipeline (Google proxy, logging, expansion, caching)
+|  ├─ secure_proxy.py              # Handles certificates for google search
 │  ├─ semantic_expansion.py        # Expands a user query into a richer one using an Ollama model
 │  └─ user_profile_service.py      # Aggregates queries/clicks and builds per-user interest profiles
 
@@ -178,7 +180,21 @@ QUERY_CACHE_TTL = 3600
 
 set QUERY_CACHE_TTL = 0 to disable cache
 
+### secure proxy setup
+In the .env file for backend enable automatic certificate pinning (optional, default: False)
+ENABLE_PINNING=True will make the proxy fetch Google’s certificate fingerprint at runtime and verify it on each request.
+If set to False or omitted, the proxy still enforces TLS certificate verification, but does not do pinning.
+This is optional; standard TLS verification is sufficient for most production use cases.
 
+ENABLE_PINNING=True
+
+SECURE_PROXY_URL=http://localhost:8000
+
+Run the backend secure_proxy:
+'''
+   cd backend
+   uvicorn services.secure_proxy:app --host 127.0.0.1 --port 8000
+'''
 
 ### Ollama Installation and Model Setup
 

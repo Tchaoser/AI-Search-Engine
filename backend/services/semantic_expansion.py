@@ -52,7 +52,8 @@ MAX_SNIPPET_CHARS = int(os.getenv("SE_MAX_SNIPPET_CHARS", "600"))
 MAX_SYSTEM_PROMPT_CHARS = int(os.getenv("SE_MAX_SYSTEM_PROMPT_CHARS", "1200"))
 # Max allowed length for the user prompt (raw seed query)
 MAX_USER_PROMPT_CHARS = int(os.getenv("SE_MAX_USER_PROMPT_CHARS", "600"))
-
+# time out for ollama response
+TIME_OUT = 60
 # NOTE/TODO:
 # User interests are provided as a soft bias signal only.
 # The system prompt explicitly instructs the LLM not to infer or invent
@@ -296,31 +297,6 @@ def _extract_implicit(profile: dict) -> Dict[str, float]:
     # logger.info("[Personalization] Extracted implicit interests (raw scores): %s", out)
     return out
 
-
-# # -----------------------
-# # Top-K selection
-# # -----------------------
-# def _select_top_k(explicit: Dict[str, float], implicit: Dict[str, float]) -> Tuple[List[str], List[str]]:
-#     """
-#     Independently select top-K explicit and top-K implicit interests.
-
-#     Returns:
-#       (top_explicit_keywords, top_implicit_keywords) — each list ordered by
-#       descending score (highest first). If there are fewer than K items, returns
-#       whatever is available.
-#     """
-#     explicit_sorted = sorted(explicit.items(), key=lambda kv: kv[1], reverse=True)
-#     implicit_sorted = sorted(implicit.items(), key=lambda kv: kv[1], reverse=True)
-
-#     top_explicit = [kw for kw, _ in explicit_sorted[:TOP_K_EXPLICIT]]
-#     top_implicit = [kw for kw, _ in implicit_sorted[:TOP_K_IMPLICIT]]
-
-#     logger.info("[Personalization] Top explicit (ordered): %s", top_explicit)
-#     logger.info("[Personalization] Top implicit (ordered): %s", top_implicit)
-
-#     return top_explicit, top_implicit
-
-
 # -----------------------
 # Format personalization snippet
 # -----------------------
@@ -443,8 +419,7 @@ async def expand_query(
 
     # 2) Build system prompt
     logger.info(semantic_mode)
-    logger.info(semantic_mode)
-    logger.info(semantic_mode)
+    #
     if semantic_mode == "clarify_and_personalize":
         system_prompt = SYSTEM_PROMPT_CLARIFY_AND_PERSONALIZE
     else:
@@ -515,7 +490,7 @@ async def expand_query(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=TIME_OUT) as client:
             resp = await client.post(f"{OLLAMA_URL.rstrip('/')}/api/generate", json=payload)
         resp.raise_for_status()
 

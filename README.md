@@ -50,7 +50,8 @@ backend/
 │  ├─ logging_service.py           # Persists queries, clicks, and feedback events to MongoDB
 │  ├─ query_cache.py               # In-memory TTL cache for semantic query expansions
 │  ├─ search_service.py            # Search pipeline (Google proxy, logging, expansion, caching)
-│  ├─ semantic_expansion.py        # Expands a user query into a richer one using an Ollama model
+│  ├─ semantic_expansion.py        # Expands a user query using an LLM, with optional interest-based personalization
+│  ├─ interest_selection.py        # Interest selection algorithms (top-K, hybrid) with env-based switching
 │  └─ user_profile_service.py      # Aggregates queries/clicks and builds per-user interest profiles
 
 ├─ background_tasks/
@@ -343,3 +344,55 @@ Update `OLLAMA_URL` in `.env`.
 **MongoDB SSL handshake or connection error**
 The IP is not whitelisted.
 In MongoDB Atlas: Database → Network Access → IP Access List → Add current IP.
+
+## Interest Selection & Personalization Logic
+
+User personalization is intentionally lightweight, transparent, and configurable.
+
+The backend models two independent types of interests:
+
+- **Explicit interests** – user-declared keywords with weights in the range 0..1
+- **Implicit interests** – inferred keywords with numeric scores derived from behavior
+
+These interests are **never mixed or rescaled**. They are handled independently and provided to the LLM only as soft context.
+
+### Interest Selection Algorithms
+
+The system supports multiple interest-selection strategies, controlled via environment variables:
+
+#### 1) Top-K (legacy, default)
+- Deterministically selects the top-K explicit and top-K implicit interests
+- Always returns the same interests for the same profile
+- Most stable and conservative behavior
+
+#### 2) Hybrid (deterministic core + sampled tail)
+- Always includes the strongest N interests
+- Fills remaining slots by sampling from the next-best interests
+- Preserves user identity while introducing controlled diversity
+- Sampling can be deterministic (stable per user/query) or randomized
+
+The selection algorithm is applied **before** interest tiering (strong / medium / weak) and verbosity filtering.
+
+By default, the system continues to use top-K selection unless explicitly configured otherwise.
+
+### Interest Selection Configuration
+
+The interest-selection algorithm used during semantic expansion is configurable.
+
+```env
+# Interest-selection algorithm
+# - top_k  : legacy deterministic top-K selection
+# - hybrid : deterministic core + sampled tail
+SE_INTEREST_SELECTION_ALGO=top_k
+
+# Top-K sizes (used by both algorithms)
+SE_EXP_TOP_K_EXPLICIT=5
+SE_EXP_TOP_K_IMPLICIT=5
+
+# Hybrid-specific tuning (used only when algo=hybrid)
+SE_HYBRID_CORE_N=2
+SE_HYBRID_POOL_SIZE=10
+
+# If 1, sampling is deterministic per (user_id, query)
+# If 0, sampling is random on each request
+SE_HYBRID_DETERMINISTIC=1

@@ -432,7 +432,7 @@ async def expand_query(
                 explicit_map = _extract_explicit(profile)
                 implicit_map = _extract_implicit(profile)
 
-                # NEW: apply selection (top_k vs hybrid via env) so K values actually matter
+                # apply selection (top_k vs hybrid via env) 
                 top_explicit, top_implicit = select_interests(
                     explicit_map, implicit_map, TOP_K_EXPLICIT, TOP_K_IMPLICIT, user_id, seed
                 )

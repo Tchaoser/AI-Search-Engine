@@ -1,0 +1,37 @@
+
+services:
+  safe-llm-app:
+    build: .
+    image: safe-llm-app
+
+    read_only: true
+
+    depends_on:
+      - ollama
+
+    environment:
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: llama3.1
+      OLLAMA_TEMP: 0.4
+
+    tmpfs:
+      - /tmp
+      - /app/backend/logs:uid=1000,gid=1000,mode=755
+      - /app/backend/data:uid=1000,gid=1000,mode=755
+      - /app/frontend/node_modules/.vite-temp:uid=1000,gid=1000,mode=755
+
+    ports:
+      - "5000:5000"
+      - "5173:5173"
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  ollama-data:

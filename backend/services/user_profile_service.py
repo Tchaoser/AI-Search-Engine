@@ -4,8 +4,8 @@ from datetime import datetime, timedelta, timezone
 import re
 import math
 from urllib.parse import urlparse
-from services.db import queries_col, interactions_col, user_profiles_col, discarded_tokens_col
-from services.logger import AppLogger
+from backend.services.db import queries_col, interactions_col, user_profiles_col, discarded_tokens_col
+from backend.services.logger import AppLogger
 
 logger = AppLogger.get_logger(__name__)
 
@@ -83,12 +83,15 @@ def normalize_url(url: str) -> str:
     return domain or url
 
 
-def _parse_iso(ts: str) -> datetime:
+def _parse_iso(ts) -> datetime:
     try:
-        return datetime.fromisoformat(ts)
+        dt = datetime.fromisoformat(ts)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
     except Exception:
         return datetime.now(timezone.utc)
-
+    
 
 def aggregate_queries(user_id: str,
                       session_window_minutes: int = 30,

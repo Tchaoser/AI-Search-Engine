@@ -1,10 +1,10 @@
 import time
 from fastapi import APIRouter, Query, Body, Depends, HTTPException
-from services.search_service import search
-from services.logging_service import log_query, log_interaction, log_feedback
-from services.semantic_expansion import expand_query
-from services.logger import AppLogger
-from api.utils import get_user_id_from_auth
+from backend.services.search_service import search
+from backend.services.logging_service import log_query, log_interaction, log_feedback
+from backend.services.semantic_expansion import expand_query
+from backend.services.logger import AppLogger
+from backend.api.utils import get_user_id_from_auth
 
 router = APIRouter()
 logger = AppLogger.get_logger(__name__)

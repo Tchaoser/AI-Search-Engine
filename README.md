@@ -128,6 +128,7 @@ Install:
 * Python 3.10+
 * Git
 * An IDE such as IntelliJ or VS Code
+* Docker https://www.docker.com/products/docker-desktop/
 
 ### Clone the Repository
 
@@ -179,7 +180,56 @@ QUERY_CACHE_TTL = 3600
 set QUERY_CACHE_TTL = 0 to disable cache
 
 
+### Docker Installation and Setup
+Prerequisites:
 
+Install WSL (Windows Subsystem for Linux)
+Open PowerShell as Administrator and run:
+wsl --install
+
+Install Docker Desktop for Windows
+
+Download Docker Desktop:
+https://www.docker.com/products/docker-desktop/
+
+During installation:
+Enable WSL 2 integration
+Make sure Docker uses the WSL backend
+Restart your computer if prompted.
+
+First time setup of the docker:
+
+Step 1 — Start the Ollama container
+docker compose up -d ollama
+
+This starts only the Ollama service in the background.
+
+Step 2 — Download the Model
+docker exec -it ollama ollama pull llama3.1
+
+
+If GPU memory is limited:
+
+docker exec -it ollama ollama pull llama3.2:3b
+
+The model will be stored in a Docker volume (ollama-data) and will persist between runs.
+
+Running full application:
+Once the model has been pulled, you can simply run:
+
+docker compose up --build
+
+Or in detached mode:
+
+docker compose up -d --build
+
+That will:
+
+Start Ollama
+
+Start the backend
+
+Start the frontend
 ### Ollama Installation and Model Setup
 
 Install Ollama based on your operating system:

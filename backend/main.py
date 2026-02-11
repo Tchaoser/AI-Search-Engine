@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.auth_routes import router as auth_router
-from api.search_routes import router as search_router
-from api.profile_routes import router as profile_router
-from api.setting_routes import router as settings_router
-from background_tasks.background_tasks import start_background_tasks, stop_background_tasks
-from services.logger import AppLogger
+from backend.api.auth_routes import router as auth_router
+from backend.api.search_routes import router as search_router
+from backend.api.profile_routes import router as profile_router
+from backend.api.setting_routes import router as settings_router
+from backend.background_tasks.background_tasks import start_background_tasks, stop_background_tasks
+from backend.services.logger import AppLogger
 
 # Initialize logger
 logger = AppLogger.get_logger(__name__)

@@ -10,7 +10,7 @@ export default function SearchPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [useEnhanced, setUseEnhanced] = useState(true);
-    const [enhancedQuery, setEnhancedQuery] = useState(null);
+    const [insight, setInsight] = useState(null);
 
     useEffect(() => {
         const saved = localStorage.getItem("useEnhancedQuery");
@@ -21,13 +21,13 @@ export default function SearchPage() {
         setSearchTerm(query);
         setLoading(true);
         setError(null);
-        setEnhancedQuery(null);
+        setInsight(null);
 
         try {
-            const data = await searchQuery(query, useEnhanced);
+            const data = await searchQuery(query);
             setQueryId(data.query_id || null);
             setResults(Array.isArray(data.results) ? data.results : []);
-            setEnhancedQuery(data.enhanced_query || null);
+            setInsight(data.insight || null);
         } catch (err) {
             console.error(err);
             setError("Failed to fetch results. Is the backend running?");
@@ -37,8 +37,7 @@ export default function SearchPage() {
         }
     };
 
-    const hasResultsOrMessage =
-        1;
+    const hasResultsOrMessage = searchTerm.trim().length > 0 || loading || error || results.length > 0;
 
     /* -- HERO STATE (no search yet) -- */
     if (!hasResultsOrMessage) {
@@ -63,10 +62,10 @@ export default function SearchPage() {
             <div className="results-left" style={{ flex: 1 }}>
                 <SearchBar onSearch={handleSearch} />
 
-                {enhancedQuery && (
+                {insight?.expanded_query && (
                     <div className="enhanced-box">
                         <strong>{useEnhanced ? "Enhanced Query:" : "Query:"}</strong>{" "}
-                        {enhancedQuery}
+                        {insight.expanded_query}
                     </div>
                 )}
 
@@ -84,13 +83,37 @@ export default function SearchPage() {
             {/* Right side: insight panel */}
             <div className="insight-panel">
                 <h3>Query Insights</h3>
-                <p><strong>Original query:</strong> {searchTerm || "—"}</p>
-                <p><strong>Enhanced query:</strong> {enhancedQuery || "—"}</p>
-                <p><strong>Semantic expansions:</strong> ...</p>
-                <p><strong>History effects:</strong> ...</p>
-                <p><strong>Interest model updates:</strong> ...</p>
-                <p><strong>Most recent log:</strong> ...</p>
+
+                <p className="insight-explanation">
+                    Your past searches and clicks help build a profile of your interests.
+                    This profile is used to personalize search results and guide semantic expansion.
+                </p>
+
+                {insight ? (
+                    <>
+                        <p><strong>Original Query:</strong> {insight.original_query || "—"}</p>
+                        <p><strong>Enhanced Query:</strong> {insight.expanded_query || "—"}</p>
+                        <p><strong>Semantic Mode:</strong> {insight.semantic_mode}</p>
+                        <p><strong>Verbosity:</strong> {insight.verbosity}</p>
+
+                        {insight.top_explicit?.length > 0 && (
+                            <p><strong>Top Explicit Interests Used:</strong> {insight.top_explicit.join(", ")}</p>
+                        )}
+                        {insight.top_implicit?.length > 0 && (
+                            <p><strong>Top Implicit Interests Used:</strong> {insight.top_implicit.join(", ")}</p>
+                        )}
+
+                        <p><strong>Cache Status:</strong> {insight.cache_status}</p>
+                        <p><strong>Queries Considered:</strong> {insight.queries_considered || "—"}</p>
+                        <p><strong>Clicks Considered:</strong> {insight.interactions_considered || "—"}</p>
+
+                    </>
+                ) : (
+                    <p>No insights available yet.</p>
+                )}
             </div>
+
+
         </div>
     );
 }

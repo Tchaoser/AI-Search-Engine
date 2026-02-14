@@ -379,7 +379,7 @@ async def expand_query(
         user_id: str,
         verbosity: str = "medium",
         semantic_mode: str = "clarify_only",
-) -> str:
+) -> dict:
     """
     Expand the user's `seed` query using the configured LLM, optionally biasing
     the expansion using the user's profile interests and verbosity level.
@@ -402,7 +402,7 @@ async def expand_query(
       5. Cache result and return
 
     Returns:
-      Expanded query string (single-line, whitespace-normalized)
+      both the expanded query and an insight object for frontend transparency.
     """
 
     semantic_mode = (semantic_mode or "clarify_only").lower()
@@ -418,81 +418,72 @@ async def expand_query(
         seed = _truncate_text(seed, MAX_USER_PROMPT_CHARS, context="User prompt")
 
     if not seed:
-        logger.warning("expand_query called with empty seed.")
-        return seed
+        return {"expanded_query": seed, "insight": {"original_query": "", "semantic_mode": semantic_mode}}
 
     profile_rev = 0
     if user_id:
-        prof = user_profiles_col.find_one(
-            {"user_id": user_id},
-            {"profile_revision": 1}
-        )
+        prof = user_profiles_col.find_one({"user_id": user_id}, {"profile_revision": 1})
         if prof:
             profile_rev = int(prof.get("profile_revision", 0))
 
-    # 1) Cache check
+    trace = {
+        "original_query": seed,
+        "semantic_mode": semantic_mode,
+        "verbosity": verbosity,
+        "personalization_snippet": "",
+        "cache_status": "MISS",
+        "expanded_query": "",
+        "top_explicit": [],
+        "top_implicit": [],
+        "queries_considered": 0,
+        "interactions_considered": 0,
+    }
+
+
+    # ---------------- Cache check ----------------
     cached = query_cache.get(user_id, seed, OLLAMA_MODEL, OLLAMA_TEMP, semantic_mode, verbosity, profile_rev)
     if cached:
-        logger.debug("Query expansion cache hit", extra={"original": seed, "expanded": cached})
-        return cached
-    else:
-        logger.debug("Query expansion cache miss", extra={"original": seed})
+        trace["expanded_query"] = cached
+        trace["cache_status"] = "HIT"
+        return {"expanded_query": cached, "insight": trace}
 
-    # 2) Build system prompt
+    # ---------------- Personalization ----------------
+    system_prompt = SYSTEM_PROMPT_CLARIFY_ONLY
     if semantic_mode == "clarify_and_personalize":
         system_prompt = SYSTEM_PROMPT_CLARIFY_AND_PERSONALIZE
-    else:
-        system_prompt = SYSTEM_PROMPT_CLARIFY_ONLY
+        try:
+            if user_id:
+                profile = user_profiles_col.find_one({"user_id": user_id})
+                if profile:
+                    explicit_map = _extract_explicit(profile)
+                    implicit_map = _extract_implicit(profile)
 
-    try:
-        if user_id:
-            profile = user_profiles_col.find_one({"user_id": user_id})
-            if profile:
-                explicit_map = _extract_explicit(profile)
-                implicit_map = _extract_implicit(profile)
+                    # classify tiers
+                    explicit_tiers = _classify_explicit(explicit_map)
+                    implicit_tiers = _classify_implicit(implicit_map)
 
-                # Verbosity-based filtering
-                verbosity = (verbosity or "medium").lower()
-                if verbosity not in {"off", "low", "medium", "high"}:
-                    verbosity = "medium"
+                    # filter by verbosity
+                    explicit_tiers = _filter_tiers_by_verbosity(explicit_tiers, verbosity)
+                    implicit_tiers = _filter_tiers_by_verbosity(implicit_tiers, verbosity)
 
-                # classify tiers
-                explicit_tiers = _classify_explicit(explicit_map)
-                implicit_tiers = _classify_implicit(implicit_map)
+                    # top-K lists
+                    trace["top_explicit"], trace["top_implicit"] = _select_top_k(explicit_map, implicit_map)
 
-                # filter tiers based on verbosity
-                explicit_tiers = _filter_tiers_by_verbosity(explicit_tiers, verbosity)
-                implicit_tiers = _filter_tiers_by_verbosity(implicit_tiers, verbosity)
+                    # personalization snippet
+                    snippet = _format_personalization_snippet(explicit_tiers, implicit_tiers)
+                    trace["personalization_snippet"] = snippet
 
-                # build snippet
-                snippet = _format_personalization_snippet(explicit_tiers, implicit_tiers)
-                if snippet:
-                    system_prompt = (
-                        f"{system_prompt} When expanding the query, consider the following user interest context: {snippet}"
-                    )
-                    logger.info(
-                        "[Personalization] Applied for user_id=%s (verbosity=%s): %s",
-                        user_id, verbosity, snippet
-                    )
-                logger.info(
-                    "[Personalization] Full system prompt before truncation (len=%d): %s",
-                    len(system_prompt),
-                    system_prompt
-                )
-            else:
-                logger.info("No profile found for user_id=%s", user_id)
-    except Exception as e:
-        logger.exception("Error during personalization extraction/selection: %s", e)
-        # fallback to the selected base prompt for the mode
-        system_prompt = system_prompt
+                    # add query + interaction counts
+                    trace["queries_considered"] = len(profile.get("query_history", []))
+                    trace["interactions_considered"] = len(profile.get("click_history", []))
 
-    # Normalize & truncate system prompt
-    system_prompt = _normalize_single_line(system_prompt)
+                    if snippet:
+                        system_prompt = f"{system_prompt} When expanding the query, consider the following user interest context: {snippet}"
+        except Exception as e:
+            logger.exception("Error during personalization extraction/selection: %s", e)
+            # fallback to base prompt
 
-    if 0 < MAX_SYSTEM_PROMPT_CHARS < len(system_prompt):
-        system_prompt = _truncate_text(system_prompt, MAX_SYSTEM_PROMPT_CHARS, context="System prompt")
-
-    # 3) Prepare LLM payload and call
+    # ---------------- LLM call ----------------
     payload = {
         "model": OLLAMA_MODEL,
         "stream": False,
@@ -516,29 +507,18 @@ async def expand_query(
 
         # remove wrapping quotes if present
         stripped = _strip_wrapping_quotes(normalized)
-
-        logger.info(
-            "Expanded query for seed='%s' -> '%s' (repr=%s)",
-            seed, stripped, repr(stripped)
-        )
-
         expanded = stripped
-
     except Exception as e:
-        logger.warning(
-            "Query expansion failed, using original seed='%s', error=%s",
-            seed, e
-        )
+        logger.warning("Query expansion failed, using original seed='%s', error=%s", seed, e)
         expanded = seed
 
-    # 4) Cache result (even if identical to seed)
+    # ---------------- Cache result ----------------
     try:
         query_cache.set(user_id, seed, OLLAMA_MODEL, OLLAMA_TEMP, semantic_mode, verbosity, expanded, profile_rev)
-        logger.debug(
-            "Query expansion complete",
-            extra={"original": seed, "expanded": expanded, "same": seed == expanded},
-        )
     except Exception:
         logger.exception("Failed to write expansion result to cache.")
 
-    return expanded
+    trace["expanded_query"] = expanded
+
+
+    return {"expanded_query": expanded, "insight": trace}

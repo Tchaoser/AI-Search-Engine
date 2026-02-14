@@ -2,7 +2,6 @@ from backend.services.google_api import search_google
 from backend.services.user_profile_service import preprocess, normalize_url
 from backend.services.db import user_profiles_col
 from backend.services.logger import AppLogger
-import backend.sandbox
 
 logger = AppLogger.get_logger(__name__)
 

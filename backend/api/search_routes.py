@@ -5,6 +5,7 @@ from backend.services.logging_service import log_query, log_interaction, log_fee
 from backend.services.semantic_expansion import expand_query
 from backend.services.logger import AppLogger
 from backend.api.utils import get_user_id_from_auth
+from backend.sandbox import block_shell_execution
 
 router = APIRouter()
 logger = AppLogger.get_logger(__name__)
@@ -67,22 +68,29 @@ async def search_endpoint(
     })
 
     if use_enhanced:
-        # Pass user_id, verbosity, and semantic_mode for personalized semantic expansion
-        enhanced = await expand_query(
-            q,
-            user_id=user_id,
-            verbosity=verbosity,
-            semantic_mode=semantic_mode,
-        )
+        try:
+            with block_shell_execution():
+                enhanced = await expand_query(
+                    q,
+                    user_id=user_id,
+                    verbosity=verbosity,
+                    semantic_mode=semantic_mode,
+                )
+        except PermissionError as e:
+            # If something tried to execute a shell command, we hard-fail back to raw query
+            logger.warning("Sandbox blocked command execution during query expansion", extra={"error": str(e)})
+            enhanced = q
+        except Exception as e:
+            # Keep your existing fallback behavior
+            logger.warning("Query expansion failed, using original query", extra={"error": str(e)})
+            enhanced = q
 
         if enhanced != q:
-            logger.debug("Query expanded", extra={
-                "original": q,
-                "expanded": enhanced
-            })
+            logger.debug("Query expanded", extra={"original": q, "expanded": enhanced})
     else:
         enhanced = q
         logger.debug("Query expansion disabled", extra={"query": q})
+
 
     # Log the query in DB before search (helps personalization/reranking)
     query_id = log_query(

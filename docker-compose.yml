@@ -23,6 +23,7 @@ services:
     ports:
       - "5000:5000"
       - "5173:5173"
+      - "4173:4173"
 
   ollama:
     image: ollama/ollama:latest

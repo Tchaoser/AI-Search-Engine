@@ -516,7 +516,7 @@ async def expand_query(
         # collapse whitespace first
         collapsed = " ".join(raw.split()) or seed
 
-        # normalize to NFC for characters like 
+        # normalize to NFC for characters like é
         normalized = unicodedata.normalize("NFC", collapsed)
 
         # remove wrapping quotes if present

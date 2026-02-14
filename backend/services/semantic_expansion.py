@@ -65,7 +65,6 @@ SYSTEM_PROMPT_CLARIFY_ONLY = (
     "Preserve the user's original topic and breadth; do NOT narrow, reinterpret, or resolve ambiguity using user interests. "
     "If the query has multiple common interpretations, retain all major interpretations. "
     "Add only widely accepted retrieval signals when they clearly match the user's intent. "
-    "If the query contains comparative or superlative terms (e.g., best, top, greatest, worst), include common list/ranking signals such as: list, ranking, top, greatest, or ‘of all time’"
     "Parentheses may be used ONLY for common aliases or abbreviations. "
     "Do NOT add examples, explanations, stylistic descriptions, or exclusions. "
     "Do NOT mention unrelated domains, even negatively. "
@@ -80,7 +79,6 @@ SYSTEM_PROMPT_CLARIFY_AND_PERSONALIZE = (
     "Preserve the user's original topic and intent. "
     "If the query is ambiguous and has multiple reasonable interpretations, strong user interests may be used to resolve the ambiguity toward the most personally relevant interpretation. "
     "Add only widely accepted retrieval signals when they clearly match the user's intent. "
-    "If the query contains comparative or superlative terms (e.g., best, top, greatest, worst), include common list/ranking signals such as: list, ranking, top, greatest, or ‘of all time’"
     "Parentheses may be used ONLY for common aliases or abbreviations. "
     "Do NOT add examples, explanations, stylistic descriptions, or exclusions. "
     "Do NOT mention unrelated domains, even negatively. "
@@ -441,9 +439,6 @@ async def expand_query(
         logger.debug("Query expansion cache miss", extra={"original": seed})
 
     # 2) Build system prompt
-    logger.info(semantic_mode)
-    logger.info(semantic_mode)
-    logger.info(semantic_mode)
     if semantic_mode == "clarify_and_personalize":
         system_prompt = SYSTEM_PROMPT_CLARIFY_AND_PERSONALIZE
     else:

@@ -38,7 +38,7 @@ export default function SearchPage() {
     };
 
     const hasResultsOrMessage =
-        searchTerm.trim().length > 0 || loading || error || results.length > 0;
+        1;
 
     /* -- HERO STATE (no search yet) -- */
     if (!hasResultsOrMessage) {
@@ -58,30 +58,39 @@ export default function SearchPage() {
 
     /* -- RESULTS STATE -- */
     return (
-        <div className="results-page container">
-            <h2 className="results-header">Search</h2>
-            <p className="results-subtext">
-                Enter a query to retrieve results. Click a result to log interactions.
-            </p>
+        <div className="results-page-container container">
+            {/* Left side: search + results */}
+            <div className="results-left" style={{ flex: 1 }}>
+                <SearchBar onSearch={handleSearch} />
 
-            <SearchBar onSearch={handleSearch} />
+                {enhancedQuery && (
+                    <div className="enhanced-box">
+                        <strong>{useEnhanced ? "Enhanced Query:" : "Query:"}</strong>{" "}
+                        {enhancedQuery}
+                    </div>
+                )}
 
-            {enhancedQuery && (
-                <div className="enhanced-box">
-                    <strong>{useEnhanced ? "Enhanced Query:" : "Query:"}</strong>{" "}
-                    {enhancedQuery}
-                </div>
-            )}
+                {loading && <p className="text-muted mt-2">Loading results...</p>}
+                {error && <p className="text-red mt-2">{error}</p>}
 
-            {loading && <p className="text-muted mt-2">Loading results...</p>}
-            {error && <p className="text-red mt-2">{error}</p>}
+                <SearchResults
+                    results={results}
+                    query_id={queryId}
+                    searchTerm={searchTerm}
+                    loading={loading}
+                />
+            </div>
 
-            <SearchResults
-                results={results}
-                query_id={queryId}
-                searchTerm={searchTerm}
-                loading={loading}
-            />
+            {/* Right side: insight panel */}
+            <div className="insight-panel">
+                <h3>Query Insights</h3>
+                <p><strong>Original query:</strong> {searchTerm || "—"}</p>
+                <p><strong>Enhanced query:</strong> {enhancedQuery || "—"}</p>
+                <p><strong>Semantic expansions:</strong> ...</p>
+                <p><strong>History effects:</strong> ...</p>
+                <p><strong>Interest model updates:</strong> ...</p>
+                <p><strong>Most recent log:</strong> ...</p>
+            </div>
         </div>
     );
 }

@@ -67,22 +67,18 @@ async def search_endpoint(
     })
 
     if use_enhanced:
-        # Pass user_id, verbosity, and semantic_mode for personalized semantic expansion
-        enhanced = await expand_query(
+        expanded_data = await expand_query(
             q,
             user_id=user_id,
             verbosity=verbosity,
             semantic_mode=semantic_mode,
         )
-
-        if enhanced != q:
-            logger.debug("Query expanded", extra={
-                "original": q,
-                "expanded": enhanced
-            })
+        enhanced = expanded_data["expanded_query"]
+        insight = expanded_data.get("insight", None)
     else:
         enhanced = q
-        logger.debug("Query expansion disabled", extra={"query": q})
+        insight = None
+
 
     # Log the query in DB before search (helps personalization/reranking)
     query_id = log_query(
@@ -116,7 +112,8 @@ async def search_endpoint(
         "enhanced_query": enhanced,
         "use_enhanced": use_enhanced,
         "verbosity": verbosity,
-        "semantic mode": semantic_mode
+        "semantic_mode": semantic_mode,
+        "insight": insight,
     }
 
 

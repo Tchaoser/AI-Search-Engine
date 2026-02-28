@@ -41,6 +41,10 @@ body {
     line-height: 1.55;
 }
 
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 0;
+}
+
 /* ================================================= */
 /* APP LAYOUT FRAME                                  */
 /* ================================================= */
@@ -72,7 +76,7 @@ body {
 /* ================================================= */
 
 .container {
-    max-width: 1200px;
+    max-width: min(98%, 1280px);
     width: 100%;
     margin: 0 auto;
 }
@@ -99,7 +103,7 @@ body {
 }
 
 .navbar-inner {
-    max-width: 1200px;
+    max-width: min(98%, 1280px);
     margin: 0 auto;
     display: flex;
     justify-content: space-between;
@@ -245,7 +249,7 @@ body {
     background: var(--color-surface);
     width: 100%;
     max-width: 600px;
-    padding: 5rem 4rem;
+    padding: 4rem 4rem;
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
     display: flex;
@@ -426,6 +430,7 @@ body {
     color: white;
     border: none;
     padding: 0.8rem 2rem;
+    margin: 0 0.5rem;
     border-radius: 999px;
     font-weight: 600;
     cursor: pointer;
@@ -443,9 +448,14 @@ body {
 .results-container {
     display: flex;
     flex-direction: column;
-    align-items: center;
     width: 100%;
     gap: 1.75rem;
+}
+.results-page-container {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+    justify-content: flex-start;
 }
 
 /* =============================== */
@@ -503,16 +513,10 @@ body {
     line-height: 1.6;
 
     display: -webkit-box;
-    display: box;
-    display: block;
-
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-
-    line-clamp: 4;
     -webkit-line-clamp: 4;
-    box-orient: vertical;
-    text-overflow: ellipsis;
+    -webkit-box-orient: vertical;
+
+    overflow: hidden;
 }
 
 
@@ -556,7 +560,7 @@ body {
     color: var(--color-primary);
 }
 /* ================================================= */
-/* Footer                                            */
+/* FOOTER                                            */
 /* ================================================= */
 .footer {
     background: var(--color-bg);
@@ -573,6 +577,34 @@ body {
 .footer a:hover {
     color: var(--color-primary-soft);
 }
+
+/* ================================================= */
+/* INSIGHT PANEL                                     */
+/* ================================================= */
+.insight-panel {
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    max-width: 400px;
+    width: 100%;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 0.95rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 800px) {
+    .results-page-container {
+        flex-direction: column;
+    }
+
+    .insight-panel {
+        max-width: 100%;
+        margin-top: 1.5rem;
+    }
+}
+
 
 /* ================================================= */
 /* PROFILE                                           */
@@ -626,7 +658,7 @@ body {
 
 
 /* ================================================= */
-/* PROFILE SECTIONS                    */
+/* PROFILE SECTIONS                                  */
 /* ================================================= */
 
 .profile-page {

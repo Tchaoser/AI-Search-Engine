@@ -25,6 +25,7 @@ from __future__ import annotations
 import os
 import re
 from typing import Dict, List, Optional, Tuple
+from services.interest_selection import select_interests
 
 import httpx
 import unicodedata
@@ -51,7 +52,8 @@ MAX_SNIPPET_CHARS = int(os.getenv("SE_MAX_SNIPPET_CHARS", "600"))
 MAX_SYSTEM_PROMPT_CHARS = int(os.getenv("SE_MAX_SYSTEM_PROMPT_CHARS", "1200"))
 # Max allowed length for the user prompt (raw seed query)
 MAX_USER_PROMPT_CHARS = int(os.getenv("SE_MAX_USER_PROMPT_CHARS", "600"))
-
+# time out for ollama response
+TIME_OUT = 60
 # NOTE/TODO:
 # User interests are provided as a soft bias signal only.
 # The system prompt explicitly instructs the LLM not to infer or invent
@@ -293,31 +295,6 @@ def _extract_implicit(profile: dict) -> Dict[str, float]:
     # logger.info("[Personalization] Extracted implicit interests (raw scores): %s", out)
     return out
 
-
-# -----------------------
-# Top-K selection
-# -----------------------
-def _select_top_k(explicit: Dict[str, float], implicit: Dict[str, float]) -> Tuple[List[str], List[str]]:
-    """
-    Independently select top-K explicit and top-K implicit interests.
-
-    Returns:
-      (top_explicit_keywords, top_implicit_keywords) — each list ordered by
-      descending score (highest first). If there are fewer than K items, returns
-      whatever is available.
-    """
-    explicit_sorted = sorted(explicit.items(), key=lambda kv: kv[1], reverse=True)
-    implicit_sorted = sorted(implicit.items(), key=lambda kv: kv[1], reverse=True)
-
-    top_explicit = [kw for kw, _ in explicit_sorted[:TOP_K_EXPLICIT]]
-    top_implicit = [kw for kw, _ in implicit_sorted[:TOP_K_IMPLICIT]]
-
-    logger.info("[Personalization] Top explicit (ordered): %s", top_explicit)
-    logger.info("[Personalization] Top implicit (ordered): %s", top_implicit)
-
-    return top_explicit, top_implicit
-
-
 # -----------------------
 # Format personalization snippet
 # -----------------------
@@ -441,7 +418,16 @@ async def expand_query(
 
 
     # ---------------- Cache check ----------------
-    cached = query_cache.get(user_id, seed, OLLAMA_MODEL, OLLAMA_TEMP, semantic_mode, verbosity, profile_rev)
+    cached = query_cache.get(
+        user_id,
+        seed,
+        OLLAMA_MODEL,
+        OLLAMA_TEMP,
+        semantic_mode,
+        verbosity,
+        profile_rev,
+    )
+
     if cached:
         trace["expanded_query"] = cached
         trace["cache_status"] = "HIT"
@@ -451,6 +437,7 @@ async def expand_query(
     system_prompt = SYSTEM_PROMPT_CLARIFY_ONLY
     if semantic_mode == "clarify_and_personalize":
         system_prompt = SYSTEM_PROMPT_CLARIFY_AND_PERSONALIZE
+
         try:
             if user_id:
                 profile = user_profiles_col.find_one({"user_id": user_id})
@@ -458,32 +445,75 @@ async def expand_query(
                     explicit_map = _extract_explicit(profile)
                     implicit_map = _extract_implicit(profile)
 
-                    # classify tiers
+                    # ---- NEW: Pluggable interest selection algorithm ----
+                    top_explicit, top_implicit = select_interests(
+                        explicit_map,
+                        implicit_map,
+                        TOP_K_EXPLICIT,
+                        TOP_K_IMPLICIT,
+                        user_id,
+                        seed,
+                    )
+
+                    trace["top_explicit"] = top_explicit
+                    trace["top_implicit"] = top_implicit
+
+                    # Reduce maps to selected interests only
+                    explicit_map = {
+                        k: explicit_map[k]
+                        for k in top_explicit
+                        if k in explicit_map
+                    }
+                    implicit_map = {
+                        k: implicit_map[k]
+                        for k in top_implicit
+                        if k in implicit_map
+                    }
+
+                    # Normalize verbosity
+                    verbosity = (verbosity or "medium").lower()
+                    if verbosity not in {"off", "low", "medium", "high"}:
+                        verbosity = "medium"
+
+                    # Tier classification
                     explicit_tiers = _classify_explicit(explicit_map)
                     implicit_tiers = _classify_implicit(implicit_map)
 
-                    # filter by verbosity
+                    # Verbosity filtering
                     explicit_tiers = _filter_tiers_by_verbosity(explicit_tiers, verbosity)
                     implicit_tiers = _filter_tiers_by_verbosity(implicit_tiers, verbosity)
 
-                    # top-K lists
-                    trace["top_explicit"], trace["top_implicit"] = _select_top_k(explicit_map, implicit_map)
+                    # Build personalization snippet
+                    snippet = _format_personalization_snippet(
+                        explicit_tiers,
+                        implicit_tiers,
+                    )
 
-                    # personalization snippet
-                    snippet = _format_personalization_snippet(explicit_tiers, implicit_tiers)
                     trace["personalization_snippet"] = snippet
-
-                    # add query + interaction counts
                     trace["queries_considered"] = len(profile.get("query_history", []))
                     trace["interactions_considered"] = len(profile.get("click_history", []))
 
                     if snippet:
-                        system_prompt = f"{system_prompt} When expanding the query, consider the following user interest context: {snippet}"
-        except Exception as e:
-            logger.exception("Error during personalization extraction/selection: %s", e)
-            # fallback to base prompt
+                        system_prompt = (
+                            f"{system_prompt} "
+                            f"When expanding the query, consider the following user interest context: {snippet}"
+                        )
 
-    # ---------------- LLM call ----------------
+        except Exception as e:
+            logger.exception(
+                "Error during personalization extraction/selection: %s", e
+            )
+            # Fallback to base system prompt safely
+
+    # Normalize & truncate system prompt
+    system_prompt = _normalize_single_line(system_prompt)
+
+    if 0 < MAX_SYSTEM_PROMPT_CHARS < len(system_prompt):
+        system_prompt = _truncate_text(
+            system_prompt,
+            MAX_SYSTEM_PROMPT_CHARS,
+            context="System prompt",
+        )
     payload = {
         "model": OLLAMA_MODEL,
         "stream": False,
@@ -493,7 +523,7 @@ async def expand_query(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=TIME_OUT) as client:
             resp = await client.post(f"{OLLAMA_URL.rstrip('/')}/api/generate", json=payload)
         resp.raise_for_status()
 

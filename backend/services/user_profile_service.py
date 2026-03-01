@@ -82,16 +82,15 @@ def normalize_url(url: str) -> str:
         return f"{domain}/{top_path}"
     return domain or url
 
-
-def _parse_iso(ts) -> datetime:
+def _parse_iso(ts: str) -> datetime:
     try:
         dt = datetime.fromisoformat(ts)
         if dt.tzinfo is None:
+            # Assume UTC for naive timestamps
             dt = dt.replace(tzinfo=timezone.utc)
         return dt
     except Exception:
         return datetime.now(timezone.utc)
-    
 
 def aggregate_queries(user_id: str,
                       session_window_minutes: int = 30,

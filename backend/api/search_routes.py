@@ -70,27 +70,47 @@ async def search_endpoint(
     if use_enhanced:
         try:
             with block_shell_execution():
-                enhanced = await expand_query(
+                expanded_data = await expand_query(
                     q,
                     user_id=user_id,
                     verbosity=verbosity,
                     semantic_mode=semantic_mode,
                 )
+
+            # Handle structured response safely
+            if isinstance(expanded_data, dict):
+                enhanced = expanded_data.get("expanded_query", q)
+                insight = expanded_data.get("insight", None)
+            else:
+                # Backwards compatibility if expand_query returns a string
+                enhanced = expanded_data
+                insight = None
+
         except PermissionError as e:
-            # If something tried to execute a shell command, we hard-fail back to raw query
-            logger.warning("Sandbox blocked command execution during query expansion", extra={"error": str(e)})
+            logger.warning(
+                "Sandbox blocked command execution during query expansion",
+                extra={"error": str(e)}
+            )
             enhanced = q
+            insight = None
+
         except Exception as e:
-            # Keep your existing fallback behavior
-            logger.warning("Query expansion failed, using original query", extra={"error": str(e)})
+            logger.warning(
+                "Query expansion failed, using original query",
+                extra={"error": str(e)}
+            )
             enhanced = q
+            insight = None
 
         if enhanced != q:
-            logger.debug("Query expanded", extra={"original": q, "expanded": enhanced})
+            logger.debug("Query expanded", extra={
+                "original": q,
+                "expanded": enhanced
+            })
+
     else:
         enhanced = q
-        logger.debug("Query expansion disabled", extra={"query": q})
-
+        insight = None
 
     # Log the query in DB before search (helps personalization/reranking)
     query_id = log_query(
@@ -124,7 +144,8 @@ async def search_endpoint(
         "enhanced_query": enhanced,
         "use_enhanced": use_enhanced,
         "verbosity": verbosity,
-        "semantic mode": semantic_mode
+        "semantic_mode": semantic_mode,
+        "insight": insight,
     }
 
 

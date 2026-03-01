@@ -1,16 +1,32 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.auth_routes import router as auth_router
-from api.search_routes import router as search_router
-from api.profile_routes import router as profile_router
-from api.setting_routes import router as settings_router
-from background_tasks.background_tasks import start_background_tasks, stop_background_tasks
-from services.logger import AppLogger
+from backend.api.auth_routes import router as auth_router
+from backend.api.search_routes import router as search_router
+from backend.api.profile_routes import router as profile_router
+from backend.api.setting_routes import router as settings_router
+from backend.background_tasks.background_tasks import start_background_tasks, stop_background_tasks
+from backend.services.logger import AppLogger
 
 # Initialize logger
 logger = AppLogger.get_logger(__name__)
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifecycle - startup and shutdown."""
+    # Startup
+    logger.info("FastAPI application startup initiated")
+    start_background_tasks()
+    logger.info("FastAPI application started successfully")
+    yield
+    # Shutdown
+    logger.info("FastAPI application shutdown initiated")
+    stop_background_tasks()
+    logger.info("FastAPI application shutdown complete")
+
+
+app = FastAPI(lifespan=lifespan)
 
 # Add CORS middleware
 origins = [
@@ -31,23 +47,6 @@ app.include_router(auth_router)
 app.include_router(search_router)
 app.include_router(profile_router)
 app.include_router(settings_router)
-
-
-# Background tasks lifecycle
-@app.on_event("startup")
-async def startup_event():
-    """Start background tasks on server startup."""
-    logger.info("FastAPI application startup initiated")
-    start_background_tasks()
-    logger.info("FastAPI application started successfully")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Stop background tasks on server shutdown."""
-    logger.info("FastAPI application shutdown initiated")
-    stop_background_tasks()
-    logger.info("FastAPI application shutdown complete")
 
 
 # Simple health check endpoint, can be removed

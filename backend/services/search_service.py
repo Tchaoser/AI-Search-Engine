@@ -1,7 +1,7 @@
-from services.google_api import search_google
-from services.user_profile_service import preprocess, normalize_url
-from services.db import user_profiles_col
-from services.logger import AppLogger
+from backend.services.google_api import search_google
+from backend.services.user_profile_service import preprocess, normalize_url
+from backend.services.db import user_profiles_col
+from backend.services.logger import AppLogger
 
 logger = AppLogger.get_logger(__name__)
 

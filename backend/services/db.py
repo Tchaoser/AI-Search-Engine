@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from pymongo import MongoClient
-from services.logger import AppLogger
+from backend.services.logger import AppLogger
 
 logger = AppLogger.get_logger(__name__)
 

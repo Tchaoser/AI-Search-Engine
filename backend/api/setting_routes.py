@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Body
-from services.db import user_profiles_col
-from api.utils import get_user_id_from_auth
+from backend.services.db import user_profiles_col
+from backend.api.utils import get_user_id_from_auth
 
 router = APIRouter()
 

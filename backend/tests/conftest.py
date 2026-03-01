@@ -36,6 +36,16 @@ with patch("services.db.users_col", mock_users_col), \
 
 
 @pytest.fixture
+def test_app():
+    """
+    Provide access to the FastAPI app instance for dependency overrides.
+    Cleans up any overrides after the test.
+    """
+    yield app
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
 def client():
     """
     Create a test client for the FastAPI application.

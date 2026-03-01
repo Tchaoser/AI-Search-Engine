@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 def make_query_doc(user_id: str, raw_text: str, enhanced_text: str = None):
     """
@@ -10,7 +10,7 @@ def make_query_doc(user_id: str, raw_text: str, enhanced_text: str = None):
         "user_id": user_id,
         "raw_text": raw_text,
         "enhanced_text": enhanced_text,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 def make_interaction_doc(user_id: str, query_id: str, clicked_url: str, rank: int, action_type: str = "click"):
@@ -23,7 +23,7 @@ def make_interaction_doc(user_id: str, query_id: str, clicked_url: str, rank: in
         "query_id": query_id,
         "clicked_url": clicked_url,
         "rank": rank,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "action_type": action_type, #can be click (default), positive_feedback or negative_feedback
     }
 
@@ -36,7 +36,7 @@ def make_user_profile_doc(user_id, interests, query_history, click_history, expl
         "implicit_interests": interests,
         "query_history": query_history,
         "click_history": click_history,
-        "last_updated": datetime.utcnow().isoformat(),
+        "last_updated": datetime.now(timezone.utc).isoformat(),
         "explicit_interests": explicit_interests or [],
         "embedding": None
     }

@@ -1,6 +1,6 @@
-from services.db import queries_col, interactions_col
-from models.data_models import make_query_doc, make_interaction_doc
-from services.logger import AppLogger
+from backend.services.db import queries_col, interactions_col
+from backend.models.data_models import make_query_doc, make_interaction_doc
+from backend.services.logger import AppLogger
 
 logger = AppLogger.get_logger(__name__)
 

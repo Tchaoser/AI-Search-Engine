@@ -17,8 +17,8 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from services.user_profile_service import build_user_profile
-from services.db import queries_col
+from backend.services.user_profile_service import build_user_profile
+from backend.services.db import queries_col
 def run_profile_build():
     """
     Aggregates all unique user_ids in queries_col and rebuilds their profiles.

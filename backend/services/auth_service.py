@@ -1,12 +1,12 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 import os
 from jose import JWTError, jwt
 from jose.exceptions import ExpiredSignatureError
 from passlib.context import CryptContext
 
-from services.db import users_col
-from services.logger import AppLogger
+from backend.services.db import users_col
+from backend.services.logger import AppLogger
 
 # Config
 SECRET_KEY = os.environ["SECRET_KEY"]
@@ -40,7 +40,7 @@ def create_user(username: str, email: Optional[str], password: str) -> dict:
         "username": username,
         "email": email,
         "hashed_password": hashed,
-        "created_at": datetime.utcnow().isoformat()
+        "created_at": datetime.now(timezone.utc).isoformat()
     }
     users_col.insert_one(user_doc)
     logger.debug("User document inserted", extra={
@@ -62,7 +62,7 @@ def authenticate_user(username: str, password: str) -> Optional[dict]:
 
 def create_access_token(*, data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     if expires_delta:
         expire = now + expires_delta
     else:

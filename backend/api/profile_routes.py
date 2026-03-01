@@ -1,11 +1,11 @@
 from typing import Optional
 from fastapi import APIRouter, Body, HTTPException, Depends
 from pydantic import BaseModel
-from datetime import datetime
-from services.user_profile_service import build_user_profile
-from services.db import user_profiles_col
-from services.logger import AppLogger
-from api.utils import get_user_id_from_auth, require_user_id_from_auth
+from datetime import datetime, timezone
+from backend.services.user_profile_service import build_user_profile
+from backend.services.db import user_profiles_col
+from backend.services.logger import AppLogger
+from backend.api.utils import get_user_id_from_auth, require_user_id_from_auth
 
 router = APIRouter()
 logger = AppLogger.get_logger(__name__)
@@ -46,7 +46,7 @@ def promote_to_explicit(profile, keyword, weight=1.0):
     profile.setdefault("explicit_interests", []).append({
         "keyword": keyword,
         "weight": weight,
-        "last_updated": datetime.utcnow().isoformat()
+        "last_updated": datetime.now(timezone.utc).isoformat()
     })
 
     remove_from_implicit(profile, keyword)
@@ -124,7 +124,7 @@ async def bulk_update_explicit_interests(
 
         if key in keyword_map:
             keyword_map[key]["weight"] = wt
-            keyword_map[key]["last_updated"] = datetime.utcnow().isoformat()
+            keyword_map[key]["last_updated"] = datetime.now(timezone.utc).isoformat()
         else:
             promote_to_explicit(profile, kw, wt)
 

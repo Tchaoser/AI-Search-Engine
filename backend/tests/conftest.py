@@ -25,14 +25,14 @@ mock_discarded_tokens_col = MagicMock()
 mock_users_col.find_one.return_value = None  # No existing user by default
 mock_queries_col.distinct.return_value = []  # No user IDs by default
 
-with patch("services.db.users_col", mock_users_col), \
-     patch("services.db.user_profiles_col", mock_profiles_col), \
-     patch("services.db.queries_col", mock_queries_col), \
-     patch("services.db.interactions_col", mock_interactions_col), \
-     patch("services.db.discarded_tokens_col", mock_discarded_tokens_col), \
-     patch("background_tasks.background_tasks.start_background_tasks"), \
-     patch("background_tasks.background_tasks.stop_background_tasks"):
-    from main import app
+with patch("backend.services.db.users_col", mock_users_col), \
+     patch("backend.services.db.user_profiles_col", mock_profiles_col), \
+     patch("backend.services.db.queries_col", mock_queries_col), \
+     patch("backend.services.db.interactions_col", mock_interactions_col), \
+     patch("backend.services.db.discarded_tokens_col", mock_discarded_tokens_col), \
+     patch("backend.background_tasks.background_tasks.start_background_tasks"), \
+     patch("backend.background_tasks.background_tasks.stop_background_tasks"):
+    from backend.main import app
 
 
 @pytest.fixture
@@ -76,7 +76,7 @@ def mock_auth_service():
     """
     Mock authentication service for testing auth-protected endpoints.
     """
-    with patch("api.auth_routes.auth_service") as mock_service:
+    with patch("backend.api.auth_routes.auth_service") as mock_service:
         # Setup default mock behaviors
         mock_service.create_user.return_value = {
             "user_id": "test_user_123",
@@ -96,7 +96,7 @@ def mock_search_service():
     """
     Mock search service to avoid making actual API calls during tests.
     """
-    with patch("api.search_routes.search") as mock_search:
+    with patch("backend.api.search_routes.search") as mock_search:
         mock_search.return_value = {
             "results": [
                 {
@@ -142,9 +142,9 @@ def mock_logging_service():
     """
     Mock logging service to avoid database writes during tests.
     """
-    with patch("api.search_routes.log_query") as mock_log_query, \
-         patch("api.search_routes.log_interaction") as mock_log_interaction, \
-         patch("api.search_routes.log_feedback") as mock_log_feedback:
+    with patch("backend.api.search_routes.log_query") as mock_log_query, \
+         patch("backend.api.search_routes.log_interaction") as mock_log_interaction, \
+         patch("backend.api.search_routes.log_feedback") as mock_log_feedback:
         yield {
             "log_query": mock_log_query,
             "log_interaction": mock_log_interaction,

@@ -9,9 +9,9 @@ import os
 import threading
 import time
 from datetime import datetime, timezone
-from services.db import queries_col, user_profiles_col
-from services.user_profile_service import build_user_profile
-from services.logger import AppLogger
+from backend.services.db import queries_col, user_profiles_col
+from backend.services.user_profile_service import build_user_profile
+from backend.services.logger import AppLogger
 
 # Configuration
 PROFILE_REBUILD_INTERVAL_MINUTES = int(os.getenv("PROFILE_REBUILD_INTERVAL_MINUTES", 3))
@@ -82,7 +82,7 @@ class ProfileRebuildThread(threading.Thread):
                     logger.warning("Failed to rebuild profile", extra={
                         "user_id": user_id,
                         "error": str(e)
-                    }, exc_info=False)
+                    }, exc_info=True)
             
             elapsed = (datetime.now(timezone.utc) - start_time).total_seconds()
             logger.info("Profile rebuild cycle complete", extra={

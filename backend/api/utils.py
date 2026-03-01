@@ -1,5 +1,5 @@
 from fastapi import Header, HTTPException
-from services import auth_service
+from backend.services import auth_service
 from jose.exceptions import ExpiredSignatureError
 from jose import JWTError
 

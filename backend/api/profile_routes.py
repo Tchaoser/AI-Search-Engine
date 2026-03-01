@@ -2,10 +2,10 @@ from typing import Optional
 from fastapi import APIRouter, Body, HTTPException, Depends
 from pydantic import BaseModel
 from datetime import datetime, timezone
-from services.user_profile_service import build_user_profile
-from services.db import user_profiles_col
-from services.logger import AppLogger
-from api.utils import get_user_id_from_auth, require_user_id_from_auth
+from backend.services.user_profile_service import build_user_profile
+from backend.services.db import user_profiles_col
+from backend.services.logger import AppLogger
+from backend.api.utils import get_user_id_from_auth, require_user_id_from_auth
 
 router = APIRouter()
 logger = AppLogger.get_logger(__name__)

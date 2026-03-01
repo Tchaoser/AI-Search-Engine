@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Body, HTTPException
-from services import auth_service
-from services.logger import AppLogger
+from backend.services import auth_service
+from backend.services.logger import AppLogger
 
 router = APIRouter()
 logger = AppLogger.get_logger(__name__)

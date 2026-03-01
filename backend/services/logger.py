@@ -138,7 +138,7 @@ def _get_logger(name: str) -> logging.Logger:
     logger.setLevel(logging.DEBUG)
     
     # Create logs directory if it doesn't exist
-    log_dir = Path("logs")
+    log_dir = Path("/app/backend/logs")
     log_dir.mkdir(exist_ok=True)
     log_file = log_dir / "app.log"
     

@@ -29,9 +29,9 @@ from typing import Dict, List, Optional, Tuple
 import httpx
 import unicodedata
 
-from services.query_cache import query_cache
-from services.db import user_profiles_col
-from services.logger import AppLogger
+from backend.services.query_cache import query_cache
+from backend.services.db import user_profiles_col
+from backend.services.logger import AppLogger
 
 logger = AppLogger.get_logger(__name__)
 

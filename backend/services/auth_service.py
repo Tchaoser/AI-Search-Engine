@@ -5,8 +5,8 @@ from jose import JWTError, jwt
 from jose.exceptions import ExpiredSignatureError
 from passlib.context import CryptContext
 
-from services.db import users_col
-from services.logger import AppLogger
+from backend.services.db import users_col
+from backend.services.logger import AppLogger
 
 # Config
 SECRET_KEY = os.environ["SECRET_KEY"]

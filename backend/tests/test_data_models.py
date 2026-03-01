@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timezone
 from unittest.mock import patch
 
-from models.data_models import (
+from backend.models.data_models import (
     make_query_doc,
     make_interaction_doc,
     make_user_profile_doc,

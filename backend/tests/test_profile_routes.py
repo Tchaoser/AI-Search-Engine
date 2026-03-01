@@ -3,7 +3,7 @@ Tests for user profile routes (/profiles/*).
 """
 import pytest
 from unittest.mock import patch, Mock
-from api.utils import get_user_id_from_auth, require_user_id_from_auth
+from backend.api.utils import get_user_id_from_auth, require_user_id_from_auth
 
 
 class TestProfileRoutes:
@@ -12,7 +12,7 @@ class TestProfileRoutes:
     def test_get_user_profile_by_id(self, client, mock_user_profile):
         """Test retrieving any user's profile by user_id."""
         # Arrange
-        with patch("services.user_profile_service.build_user_profile", return_value=mock_user_profile):
+        with patch("backend.services.user_profile_service.build_user_profile", return_value=mock_user_profile):
             
             # Act
             response = client.get("/profiles/test_user_123")
@@ -26,7 +26,7 @@ class TestProfileRoutes:
     def test_add_explicit_interest_missing_keyword(self, client):
         """Test adding explicit interest without keyword fails."""
         # Arrange
-        with patch("api.utils.get_user_id_from_auth", return_value="test_user_123"):
+        with patch("backend.api.utils.get_user_id_from_auth", return_value="test_user_123"):
             payload = {
                 "weight": 1.0
             }
@@ -40,7 +40,7 @@ class TestProfileRoutes:
     def test_profile_endpoint_returns_correct_structure(self, client, mock_user_profile):
         """Test that profile response has the expected structure."""
         # Arrange
-        with patch("services.user_profile_service.build_user_profile", return_value=mock_user_profile):
+        with patch("backend.services.user_profile_service.build_user_profile", return_value=mock_user_profile):
             
             # Act
             response = client.get("/profiles/test_user_123")
@@ -64,7 +64,7 @@ class TestProfileRoutes:
     def test_profile_implicit_interests_as_dict(self, client, mock_user_profile):
         """Test that implicit_interests is returned as a dictionary."""
         # Arrange
-        with patch("services.user_profile_service.build_user_profile", return_value=mock_user_profile):
+        with patch("backend.services.user_profile_service.build_user_profile", return_value=mock_user_profile):
             
             # Act
             response = client.get("/profiles/test_user_123")
@@ -142,7 +142,7 @@ class TestMultiUserProfileIsolation:
                 return user_b_profile
             return None
 
-        with patch("api.profile_routes.build_user_profile", side_effect=mock_build_profile):
+        with patch("backend.api.profile_routes.build_user_profile", side_effect=mock_build_profile):
             # Act
             response_a = client.get("/profiles/user_a_123")
             response_b = client.get("/profiles/user_b_456")
@@ -180,7 +180,7 @@ class TestMultiUserProfileIsolation:
                 return user_b_profile
             return None
 
-        with patch("api.profile_routes.build_user_profile", side_effect=mock_build_profile):
+        with patch("backend.api.profile_routes.build_user_profile", side_effect=mock_build_profile):
             # Act
             response_b = client.get("/profiles/user_b_456")
 
@@ -208,7 +208,7 @@ class TestMultiUserProfileIsolation:
                 return user_b_profile
             return None
 
-        with patch("api.profile_routes.build_user_profile", side_effect=mock_build_profile):
+        with patch("backend.api.profile_routes.build_user_profile", side_effect=mock_build_profile):
             # Act
             response_b = client.get("/profiles/user_b_456")
 
@@ -233,7 +233,7 @@ class TestMultiUserProfileIsolation:
                 return user_b_profile
             return None
 
-        with patch("api.profile_routes.build_user_profile", side_effect=mock_build_profile):
+        with patch("backend.api.profile_routes.build_user_profile", side_effect=mock_build_profile):
             # Act
             response_a = client.get("/profiles/user_a_123")
             response_b = client.get("/profiles/user_b_456")
@@ -262,7 +262,7 @@ class TestMultiUserProfileIsolation:
                 return user_b_profile
             return None
 
-        with patch("api.profile_routes.build_user_profile", side_effect=mock_build_profile):
+        with patch("backend.api.profile_routes.build_user_profile", side_effect=mock_build_profile):
             # Act
             response_a = client.get("/profiles/user_a_123")
             response_b = client.get("/profiles/user_b_456")
@@ -305,8 +305,8 @@ class TestMultiUserProfileIsolation:
 
         test_app.dependency_overrides[get_user_id_from_auth] = override_get_user_id
 
-        with patch("api.profile_routes.build_user_profile", side_effect=mock_build_profile), \
-             patch("api.profile_routes.user_profiles_col") as mock_col:
+        with patch("backend.api.profile_routes.build_user_profile", side_effect=mock_build_profile), \
+             patch("backend.api.profile_routes.user_profiles_col") as mock_col:
             
             # Act - Add interest to User A
             response_add = client.post("/profiles/explicit/add", json={
@@ -348,8 +348,8 @@ class TestMultiUserProfileIsolation:
 
         test_app.dependency_overrides[get_user_id_from_auth] = override_get_user_id
 
-        with patch("api.profile_routes.build_user_profile", side_effect=mock_build_profile), \
-             patch("api.profile_routes.user_profiles_col") as mock_col:
+        with patch("backend.api.profile_routes.build_user_profile", side_effect=mock_build_profile), \
+             patch("backend.api.profile_routes.user_profiles_col") as mock_col:
             
             # Act - Remove interest from User A
             response_remove = client.request("DELETE", "/profiles/explicit/remove", json={
@@ -391,8 +391,8 @@ class TestMultiUserProfileIsolation:
 
         test_app.dependency_overrides[get_user_id_from_auth] = override_get_user_id
 
-        with patch("api.profile_routes.build_user_profile", side_effect=mock_build_profile), \
-             patch("api.profile_routes.user_profiles_col") as mock_col:
+        with patch("backend.api.profile_routes.build_user_profile", side_effect=mock_build_profile), \
+             patch("backend.api.profile_routes.user_profiles_col") as mock_col:
             
             # Act - Bulk update User A
             response_update = client.put("/profiles/explicit/bulk_update", json={
@@ -427,7 +427,7 @@ class TestMultiUserProfileIsolation:
                 return user_b_profile
             return None
 
-        with patch("api.profile_routes.build_user_profile", side_effect=mock_build_profile):
+        with patch("backend.api.profile_routes.build_user_profile", side_effect=mock_build_profile):
             # Act
             response_a = client.get("/profiles/user_a_123")
             response_b = client.get("/profiles/user_b_456")
@@ -453,7 +453,7 @@ class TestMultiUserProfileIsolation:
                 return user_c_profile
             return None
 
-        with patch("api.profile_routes.build_user_profile", side_effect=mock_build_profile):
+        with patch("backend.api.profile_routes.build_user_profile", side_effect=mock_build_profile):
             # Act
             response = client.get("/profiles/guest")
 
@@ -477,7 +477,7 @@ class TestMultiUserProfileIsolation:
                 return user_c_profile
             return None
 
-        with patch("api.profile_routes.build_user_profile", side_effect=mock_build_profile):
+        with patch("backend.api.profile_routes.build_user_profile", side_effect=mock_build_profile):
             # Act
             response_auth = client.get("/profiles/user_a_123")
             response_guest = client.get("/profiles/guest")
@@ -502,7 +502,7 @@ class TestMultiUserProfileIsolation:
 
         test_app.dependency_overrides[require_user_id_from_auth] = override_require_user_id
 
-        with patch("api.profile_routes.build_user_profile", return_value=user_a_profile):
+        with patch("backend.api.profile_routes.build_user_profile", return_value=user_a_profile):
             # Act
             response = client.get("/profiles/me")
 
@@ -519,7 +519,7 @@ class TestMultiUserProfileIsolation:
 
         test_app.dependency_overrides[require_user_id_from_auth] = override_require_user_id_a
         
-        with patch("api.profile_routes.build_user_profile", return_value=user_a_profile):
+        with patch("backend.api.profile_routes.build_user_profile", return_value=user_a_profile):
             response_a = client.get("/profiles/me")
 
         # Arrange & Act - User B
@@ -528,7 +528,7 @@ class TestMultiUserProfileIsolation:
 
         test_app.dependency_overrides[require_user_id_from_auth] = override_require_user_id_b
         
-        with patch("api.profile_routes.build_user_profile", return_value=user_b_profile):
+        with patch("backend.api.profile_routes.build_user_profile", return_value=user_b_profile):
             response_b = client.get("/profiles/me")
 
         # Assert
@@ -561,8 +561,8 @@ class TestMultiUserProfileIsolation:
 
         test_app.dependency_overrides[get_user_id_from_auth] = override_get_user_id
 
-        with patch("api.profile_routes.build_user_profile", side_effect=mock_build_profile), \
-             patch("api.profile_routes.user_profiles_col") as mock_col:
+        with patch("backend.api.profile_routes.build_user_profile", side_effect=mock_build_profile), \
+             patch("backend.api.profile_routes.user_profiles_col") as mock_col:
             
             # Act - Clear User A's explicit interests
             response_clear = client.post("/profiles/explicit/clear", json={})
@@ -600,8 +600,8 @@ class TestMultiUserProfileIsolation:
 
         test_app.dependency_overrides[get_user_id_from_auth] = override_get_user_id
 
-        with patch("api.profile_routes.build_user_profile", side_effect=mock_build_profile), \
-             patch("api.profile_routes.user_profiles_col") as mock_col:
+        with patch("backend.api.profile_routes.build_user_profile", side_effect=mock_build_profile), \
+             patch("backend.api.profile_routes.user_profiles_col") as mock_col:
             mock_col.find_one.return_value = user_a_profile
             
             # Act - Clear User A's implicit interests
@@ -645,8 +645,8 @@ class TestMultiUserProfileIsolation:
 
         test_app.dependency_overrides[get_user_id_from_auth] = override_get_user_id
 
-        with patch("api.profile_routes.build_user_profile", side_effect=mock_build_profile), \
-             patch("api.profile_routes.user_profiles_col") as mock_col:
+        with patch("backend.api.profile_routes.build_user_profile", side_effect=mock_build_profile), \
+             patch("backend.api.profile_routes.user_profiles_col") as mock_col:
             mock_col.find_one.return_value = user_a_profile
             
             # Act - Upgrade implicit interest for User A
@@ -679,7 +679,7 @@ class TestMultiUserProfileIsolation:
                 return user_c_profile
             return None
 
-        with patch("api.profile_routes.build_user_profile", side_effect=mock_build_profile):
+        with patch("backend.api.profile_routes.build_user_profile", side_effect=mock_build_profile):
             # Act
             response_a = client.get("/profiles/user_a_123")
             response_b = client.get("/profiles/user_b_456")
@@ -731,8 +731,8 @@ class TestMultiUserProfileIsolation:
 
         test_app.dependency_overrides[get_user_id_from_auth] = override_get_user_id
 
-        with patch("api.profile_routes.build_user_profile", side_effect=mock_build_profile), \
-             patch("api.profile_routes.user_profiles_col") as mock_col:
+        with patch("backend.api.profile_routes.build_user_profile", side_effect=mock_build_profile), \
+             patch("backend.api.profile_routes.user_profiles_col") as mock_col:
             mock_col.find_one.return_value = user_a_profile
             
             # Act
@@ -772,8 +772,8 @@ class TestMultiUserProfileIsolation:
 
         test_app.dependency_overrides[get_user_id_from_auth] = override_get_user_id
 
-        with patch("api.profile_routes.build_user_profile", side_effect=mock_build_profile), \
-             patch("api.profile_routes.user_profiles_col") as mock_col:
+        with patch("backend.api.profile_routes.build_user_profile", side_effect=mock_build_profile), \
+             patch("backend.api.profile_routes.user_profiles_col") as mock_col:
             mock_col.find_one.return_value = user_a_profile
             
             # Act

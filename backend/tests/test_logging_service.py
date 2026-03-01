@@ -15,8 +15,8 @@ class TestLogQuery:
         # Arrange
         mock_queries_col = MagicMock()
         
-        with patch("services.logging_service.queries_col", mock_queries_col), \
-             patch("services.logging_service.make_query_doc") as mock_make_doc:
+        with patch("backend.services.logging_service.queries_col", mock_queries_col), \
+             patch("backend.services.logging_service.make_query_doc") as mock_make_doc:
             
             mock_doc = {
                 "_id": "generated_id_123",
@@ -27,7 +27,7 @@ class TestLogQuery:
             }
             mock_make_doc.return_value = mock_doc
             
-            from services.logging_service import log_query
+            from backend.services.logging_service import log_query
             
             # Act
             result = log_query("user_123", "python tutorials")
@@ -42,8 +42,8 @@ class TestLogQuery:
         # Arrange
         mock_queries_col = MagicMock()
         
-        with patch("services.logging_service.queries_col", mock_queries_col), \
-             patch("services.logging_service.make_query_doc") as mock_make_doc:
+        with patch("backend.services.logging_service.queries_col", mock_queries_col), \
+             patch("backend.services.logging_service.make_query_doc") as mock_make_doc:
             
             mock_doc = {
                 "_id": "generated_id_456",
@@ -54,7 +54,7 @@ class TestLogQuery:
             }
             mock_make_doc.return_value = mock_doc
             
-            from services.logging_service import log_query
+            from backend.services.logging_service import log_query
             
             # Act
             result = log_query(
@@ -78,8 +78,8 @@ class TestLogQuery:
         mock_queries_col = MagicMock()
         raw_text = "C++ programming language guide"
         
-        with patch("services.logging_service.queries_col", mock_queries_col), \
-             patch("services.logging_service.make_query_doc") as mock_make_doc:
+        with patch("backend.services.logging_service.queries_col", mock_queries_col), \
+             patch("backend.services.logging_service.make_query_doc") as mock_make_doc:
             
             mock_doc = {
                 "_id": "id_789",
@@ -90,7 +90,7 @@ class TestLogQuery:
             }
             mock_make_doc.return_value = mock_doc
             
-            from services.logging_service import log_query
+            from backend.services.logging_service import log_query
             
             # Act
             log_query("user_789", raw_text)
@@ -105,8 +105,8 @@ class TestLogQuery:
         mock_queries_col = MagicMock()
         mock_queries_col.insert_one.side_effect = Exception("Database connection error")
         
-        with patch("services.logging_service.queries_col", mock_queries_col), \
-             patch("services.logging_service.make_query_doc") as mock_make_doc:
+        with patch("backend.services.logging_service.queries_col", mock_queries_col), \
+             patch("backend.services.logging_service.make_query_doc") as mock_make_doc:
             
             mock_make_doc.return_value = {
                 "_id": "id_error",
@@ -116,7 +116,7 @@ class TestLogQuery:
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
             
-            from services.logging_service import log_query
+            from backend.services.logging_service import log_query
             
             # Act & Assert
             with pytest.raises(Exception) as exc_info:
@@ -129,8 +129,8 @@ class TestLogQuery:
         # Arrange
         mock_queries_col = MagicMock()
         
-        with patch("services.logging_service.queries_col", mock_queries_col), \
-             patch("services.logging_service.make_query_doc") as mock_make_doc:
+        with patch("backend.services.logging_service.queries_col", mock_queries_col), \
+             patch("backend.services.logging_service.make_query_doc") as mock_make_doc:
             
             mock_doc = {
                 "_id": "id_empty",
@@ -141,7 +141,7 @@ class TestLogQuery:
             }
             mock_make_doc.return_value = mock_doc
             
-            from services.logging_service import log_query
+            from backend.services.logging_service import log_query
             
             # Act
             result = log_query("user_empty", "")
@@ -159,8 +159,8 @@ class TestLogInteraction:
         # Arrange
         mock_interactions_col = MagicMock()
         
-        with patch("services.logging_service.interactions_col", mock_interactions_col), \
-             patch("services.logging_service.make_interaction_doc") as mock_make_doc:
+        with patch("backend.services.logging_service.interactions_col", mock_interactions_col), \
+             patch("backend.services.logging_service.make_interaction_doc") as mock_make_doc:
             
             mock_doc = {
                 "_id": "interaction_123",
@@ -173,7 +173,7 @@ class TestLogInteraction:
             }
             mock_make_doc.return_value = mock_doc
             
-            from services.logging_service import log_interaction
+            from backend.services.logging_service import log_interaction
             
             # Act
             result = log_interaction(
@@ -198,8 +198,8 @@ class TestLogInteraction:
         # Arrange
         mock_interactions_col = MagicMock()
         
-        with patch("services.logging_service.interactions_col", mock_interactions_col), \
-             patch("services.logging_service.make_interaction_doc") as mock_make_doc:
+        with patch("backend.services.logging_service.interactions_col", mock_interactions_col), \
+             patch("backend.services.logging_service.make_interaction_doc") as mock_make_doc:
             
             for rank in [1, 5, 10, 50]:
                 mock_make_doc.reset_mock()
@@ -216,7 +216,7 @@ class TestLogInteraction:
                 }
                 mock_make_doc.return_value = mock_doc
                 
-                from services.logging_service import log_interaction
+                from backend.services.logging_service import log_interaction
                 
                 # Act
                 result = log_interaction(
@@ -235,8 +235,8 @@ class TestLogInteraction:
         mock_interactions_col = MagicMock()
         url = "https://docs.python.org/3/tutorial/index.html?highlight=classes#section"
         
-        with patch("services.logging_service.interactions_col", mock_interactions_col), \
-             patch("services.logging_service.make_interaction_doc") as mock_make_doc:
+        with patch("backend.services.logging_service.interactions_col", mock_interactions_col), \
+             patch("backend.services.logging_service.make_interaction_doc") as mock_make_doc:
             
             mock_doc = {
                 "_id": "interaction_url",
@@ -249,7 +249,7 @@ class TestLogInteraction:
             }
             mock_make_doc.return_value = mock_doc
             
-            from services.logging_service import log_interaction
+            from backend.services.logging_service import log_interaction
             
             # Act
             log_interaction("user_url", "query_url", url, 3)
@@ -264,8 +264,8 @@ class TestLogInteraction:
         mock_interactions_col = MagicMock()
         mock_interactions_col.insert_one.side_effect = Exception("Write operation failed")
         
-        with patch("services.logging_service.interactions_col", mock_interactions_col), \
-             patch("services.logging_service.make_interaction_doc") as mock_make_doc:
+        with patch("backend.services.logging_service.interactions_col", mock_interactions_col), \
+             patch("backend.services.logging_service.make_interaction_doc") as mock_make_doc:
             
             mock_make_doc.return_value = {
                 "_id": "id_error",
@@ -277,7 +277,7 @@ class TestLogInteraction:
                 "action_type": "click"
             }
             
-            from services.logging_service import log_interaction
+            from backend.services.logging_service import log_interaction
             
             # Act & Assert
             with pytest.raises(Exception) as exc_info:
@@ -295,8 +295,8 @@ class TestLogFeedback:
         mock_interactions_col = MagicMock()
         mock_interactions_col.delete_many.return_value = MagicMock(deleted_count=0)
         
-        with patch("services.logging_service.interactions_col", mock_interactions_col), \
-             patch("services.logging_service.make_interaction_doc") as mock_make_doc:
+        with patch("backend.services.logging_service.interactions_col", mock_interactions_col), \
+             patch("backend.services.logging_service.make_interaction_doc") as mock_make_doc:
             
             mock_doc = {
                 "_id": "feedback_pos_123",
@@ -309,7 +309,7 @@ class TestLogFeedback:
             }
             mock_make_doc.return_value = mock_doc
             
-            from services.logging_service import log_feedback
+            from backend.services.logging_service import log_feedback
             
             # Act
             result = log_feedback(
@@ -337,8 +337,8 @@ class TestLogFeedback:
         mock_interactions_col = MagicMock()
         mock_interactions_col.delete_many.return_value = MagicMock(deleted_count=0)
         
-        with patch("services.logging_service.interactions_col", mock_interactions_col), \
-             patch("services.logging_service.make_interaction_doc") as mock_make_doc:
+        with patch("backend.services.logging_service.interactions_col", mock_interactions_col), \
+             patch("backend.services.logging_service.make_interaction_doc") as mock_make_doc:
             
             mock_doc = {
                 "_id": "feedback_neg_456",
@@ -351,7 +351,7 @@ class TestLogFeedback:
             }
             mock_make_doc.return_value = mock_doc
             
-            from services.logging_service import log_feedback
+            from backend.services.logging_service import log_feedback
             
             # Act
             result = log_feedback(
@@ -378,8 +378,8 @@ class TestLogFeedback:
         mock_interactions_col = MagicMock()
         mock_interactions_col.delete_many.return_value = MagicMock(deleted_count=1)
         
-        with patch("services.logging_service.interactions_col", mock_interactions_col), \
-             patch("services.logging_service.make_interaction_doc") as mock_make_doc:
+        with patch("backend.services.logging_service.interactions_col", mock_interactions_col), \
+             patch("backend.services.logging_service.make_interaction_doc") as mock_make_doc:
             
             mock_doc = {
                 "_id": "new_feedback",
@@ -392,7 +392,7 @@ class TestLogFeedback:
             }
             mock_make_doc.return_value = mock_doc
             
-            from services.logging_service import log_feedback
+            from backend.services.logging_service import log_feedback
             
             # Act
             log_feedback(
@@ -418,8 +418,8 @@ class TestLogFeedback:
         
         url = "https://example.com/toggle-result"
         
-        with patch("services.logging_service.interactions_col", mock_interactions_col), \
-             patch("services.logging_service.make_interaction_doc") as mock_make_doc:
+        with patch("backend.services.logging_service.interactions_col", mock_interactions_col), \
+             patch("backend.services.logging_service.make_interaction_doc") as mock_make_doc:
             
             mock_doc = {
                 "_id": "toggled_feedback",
@@ -432,7 +432,7 @@ class TestLogFeedback:
             }
             mock_make_doc.return_value = mock_doc
             
-            from services.logging_service import log_feedback
+            from backend.services.logging_service import log_feedback
             
             # Act - User changes from positive to negative
             result = log_feedback(
@@ -456,8 +456,8 @@ class TestLogFeedback:
         mock_interactions_col = MagicMock()
         mock_interactions_col.delete_many.side_effect = Exception("Delete operation failed")
         
-        with patch("services.logging_service.interactions_col", mock_interactions_col):
-            from services.logging_service import log_feedback
+        with patch("backend.services.logging_service.interactions_col", mock_interactions_col):
+            from backend.services.logging_service import log_feedback
             
             # Act & Assert
             with pytest.raises(Exception) as exc_info:
@@ -478,8 +478,8 @@ class TestLogFeedback:
         mock_interactions_col.delete_many.return_value = MagicMock(deleted_count=0)
         mock_interactions_col.insert_one.side_effect = Exception("Insert operation failed")
         
-        with patch("services.logging_service.interactions_col", mock_interactions_col), \
-             patch("services.logging_service.make_interaction_doc") as mock_make_doc:
+        with patch("backend.services.logging_service.interactions_col", mock_interactions_col), \
+             patch("backend.services.logging_service.make_interaction_doc") as mock_make_doc:
             
             mock_make_doc.return_value = {
                 "_id": "id_insert_error",
@@ -491,7 +491,7 @@ class TestLogFeedback:
                 "action_type": "positive_feedback"
             }
             
-            from services.logging_service import log_feedback
+            from backend.services.logging_service import log_feedback
             
             # Act & Assert
             with pytest.raises(Exception) as exc_info:
@@ -521,11 +521,11 @@ class TestLoggingDataIntegrity:
         
         mock_queries_col.insert_one.side_effect = capture_doc
         
-        with patch("services.logging_service.queries_col", mock_queries_col):
-            from services.logging_service import log_query
-            from models.data_models import make_query_doc
+        with patch("backend.services.logging_service.queries_col", mock_queries_col):
+            from backend.services.logging_service import log_query
+            from backend.models.data_models import make_query_doc
             
-            with patch("services.logging_service.make_query_doc", wraps=make_query_doc) as wrapped:
+            with patch("backend.services.logging_service.make_query_doc", wraps=make_query_doc) as wrapped:
                 # Act
                 try:
                     log_query("test_user", "test query", "enhanced test query")
@@ -540,11 +540,11 @@ class TestLoggingDataIntegrity:
         # Arrange
         mock_interactions_col = MagicMock()
         
-        with patch("services.logging_service.interactions_col", mock_interactions_col):
-            from services.logging_service import log_interaction
-            from models.data_models import make_interaction_doc
+        with patch("backend.services.logging_service.interactions_col", mock_interactions_col):
+            from backend.services.logging_service import log_interaction
+            from backend.models.data_models import make_interaction_doc
             
-            with patch("services.logging_service.make_interaction_doc", wraps=make_interaction_doc) as wrapped:
+            with patch("backend.services.logging_service.make_interaction_doc", wraps=make_interaction_doc) as wrapped:
                 # Act
                 try:
                     log_interaction("test_user", "test_query_id", "https://example.com", 5)
@@ -560,8 +560,8 @@ class TestLoggingDataIntegrity:
         mock_interactions_col = MagicMock()
         mock_interactions_col.delete_many.return_value = MagicMock(deleted_count=0)
         
-        with patch("services.logging_service.interactions_col", mock_interactions_col), \
-             patch("services.logging_service.make_interaction_doc") as mock_make_doc:
+        with patch("backend.services.logging_service.interactions_col", mock_interactions_col), \
+             patch("backend.services.logging_service.make_interaction_doc") as mock_make_doc:
             
             mock_make_doc.return_value = {
                 "_id": "test_id",
@@ -573,7 +573,7 @@ class TestLoggingDataIntegrity:
                 "action_type": "positive_feedback"
             }
             
-            from services.logging_service import log_feedback
+            from backend.services.logging_service import log_feedback
             
             # Act - Positive feedback
             log_feedback("user", "query", "https://example.com", 1, is_positive=True)
@@ -618,11 +618,11 @@ class TestSearchResultRelevance:
         
         mock_interactions_col.insert_one.side_effect = capture_rank
         
-        with patch("services.logging_service.interactions_col", mock_interactions_col):
-            from services.logging_service import log_interaction
-            from models.data_models import make_interaction_doc
+        with patch("backend.services.logging_service.interactions_col", mock_interactions_col):
+            from backend.services.logging_service import log_interaction
+            from backend.models.data_models import make_interaction_doc
             
-            with patch("services.logging_service.make_interaction_doc", wraps=make_interaction_doc):
+            with patch("backend.services.logging_service.make_interaction_doc", wraps=make_interaction_doc):
                 # Act - Log clicks at different positions
                 for rank in [1, 3, 7, 10]:
                     try:
@@ -648,11 +648,11 @@ class TestSearchResultRelevance:
         
         mock_interactions_col.insert_one.side_effect = capture_action_type
         
-        with patch("services.logging_service.interactions_col", mock_interactions_col):
-            from services.logging_service import log_feedback
-            from models.data_models import make_interaction_doc
+        with patch("backend.services.logging_service.interactions_col", mock_interactions_col):
+            from backend.services.logging_service import log_feedback
+            from backend.models.data_models import make_interaction_doc
             
-            with patch("services.logging_service.make_interaction_doc", wraps=make_interaction_doc):
+            with patch("backend.services.logging_service.make_interaction_doc", wraps=make_interaction_doc):
                 # Act - Log positive and negative feedback
                 try:
                     log_feedback("user", "query", "https://good.com", 1, is_positive=True)
@@ -678,11 +678,11 @@ class TestSearchResultRelevance:
         
         mock_queries_col.insert_one.side_effect = capture_doc
         
-        with patch("services.logging_service.queries_col", mock_queries_col):
-            from services.logging_service import log_query
-            from models.data_models import make_query_doc
+        with patch("backend.services.logging_service.queries_col", mock_queries_col):
+            from backend.services.logging_service import log_query
+            from backend.models.data_models import make_query_doc
             
-            with patch("services.logging_service.make_query_doc", wraps=make_query_doc):
+            with patch("backend.services.logging_service.make_query_doc", wraps=make_query_doc):
                 # Act
                 try:
                     log_query(

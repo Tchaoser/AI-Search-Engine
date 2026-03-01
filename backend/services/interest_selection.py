@@ -36,7 +36,7 @@ import os
 import random
 from typing import Dict, List, Tuple
 
-from services.logger import AppLogger
+from backend.services.logger import AppLogger
 
 logger = AppLogger.get_logger(__name__)
 

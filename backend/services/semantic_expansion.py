@@ -25,7 +25,7 @@ from __future__ import annotations
 import os
 import re
 from typing import Dict, List, Optional, Tuple
-from services.interest_selection import select_interests
+from backend.services.interest_selection import select_interests
 
 import httpx
 import unicodedata

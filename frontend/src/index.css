@@ -147,7 +147,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ================================================= */
-/* AUTH DROPDOWN                                    */
+/* DROPDOWNS                                         */
 /* ================================================= */
 
 .navbar-auth {
@@ -195,6 +195,15 @@ h1, h2, h3, h4, h5, h6 {
 .dropdown-menu a:focus-visible {
     outline: none;
     background: #f1f5f9;
+}
+
+.settings-select {
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid #cbd5e1;
+    background: white;
+    cursor: pointer;
 }
 
 .signout-btn {

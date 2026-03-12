@@ -6,6 +6,7 @@ from backend.services.semantic_expansion import expand_query
 from backend.services.logger import AppLogger
 from backend.api.utils import get_user_id_from_auth
 from backend.sandbox import block_shell_execution
+from backend.services.user_profile_service import get_profile_insight
 
 router = APIRouter()
 logger = AppLogger.get_logger(__name__)
@@ -126,6 +127,9 @@ async def search_endpoint(
     # Perform search using the active query
     results = search(enhanced, user_id=user_id)
 
+    # Fetch profile insight after search (profile builder may have updated interests)
+    profile_insight = get_profile_insight(user_id)
+
     # Measure duration
     elapsed_ms = round((time.time() - start_time) * 1000, 2)
     logger.info("Search completed", extra={
@@ -146,6 +150,7 @@ async def search_endpoint(
         "verbosity": verbosity,
         "semantic_mode": semantic_mode,
         "insight": insight,
+        "profile_insight": profile_insight
     }
 
 

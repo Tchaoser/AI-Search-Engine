@@ -11,7 +11,7 @@ class TestSearchRoutes:
     def test_search_without_enhanced_mode(self, client, mock_search_service, mock_logging_service):
         """Test search without semantic enhancement."""
         # Arrange
-        with patch("api.utils.get_user_id_from_auth", return_value="guest"):
+        with patch("backend.api.utils.get_user_id_from_auth", return_value="guest"):
             # Act
             response = client.get("/search?q=test+query&use_enhanced=false")
         
@@ -31,7 +31,7 @@ class TestSearchRoutes:
     def test_search_with_verbosity_settings(self, client, mock_search_service, mock_logging_service):
         """Test search with different verbosity levels."""
         # Arrange
-        with patch("api.utils.get_user_id_from_auth", return_value="test_user_123"):
+        with patch("backend.api.utils.get_user_id_from_auth", return_value="test_user_123"):
             # Act - Test high verbosity
             response = client.get("/search?q=test&verbosity=high")
         
@@ -43,7 +43,7 @@ class TestSearchRoutes:
     def test_search_with_semantic_modes(self, client, mock_search_service, mock_logging_service):
         """Test search with different semantic modes."""
         # Arrange
-        with patch("api.utils.get_user_id_from_auth", return_value="test_user_123"):
+        with patch("backend.api.utils.get_user_id_from_auth", return_value="test_user_123"):
             # Act - Test clarify_and_personalize mode
             response = client.get("/search?q=test&semantic_mode=clarify_and_personalize")
         
@@ -55,7 +55,7 @@ class TestSearchRoutes:
     def test_search_empty_query(self, client, mock_search_service, mock_logging_service):
         """Test search with an empty query string."""
         # Arrange
-        with patch("api.utils.get_user_id_from_auth", return_value="guest"):
+        with patch("backend.api.utils.get_user_id_from_auth", return_value="guest"):
             # Act
             response = client.get("/search?q=")
         
@@ -67,7 +67,7 @@ class TestSearchRoutes:
     def test_search_authenticated_user(self, client, mock_search_service, mock_logging_service):
         """Test search endpoint with authenticated user."""
         # Arrange
-        with patch("api.utils.get_user_id_from_auth", return_value="authenticated_user_456"):
+        with patch("backend.api.utils.get_user_id_from_auth", return_value="authenticated_user_456"):
             # Act
             response = client.get("/search?q=machine+learning")
         
@@ -81,7 +81,7 @@ class TestSearchRoutes:
     def test_search_special_characters(self, client, mock_search_service, mock_logging_service):
         """Test search with special characters in query."""
         # Arrange
-        with patch("api.utils.get_user_id_from_auth", return_value="guest"):
+        with patch("backend.api.utils.get_user_id_from_auth", return_value="guest"):
             # Act
             response = client.get("/search?q=C%2B%2B+programming")  # C++ encoded
         

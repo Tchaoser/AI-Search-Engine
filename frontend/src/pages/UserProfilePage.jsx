@@ -22,6 +22,7 @@ export default function UserProfilePage() {
         fetch(`${API_URL}/profiles/${userId}`)
             .then(res => res.ok ? res.json() : Promise.reject())
             .then(profile => {
+                // console.log("PROFILE RESPONSE:", profile);
                 setExplicitInterests(profile.explicit_interests || []);
 
                 const sortedImplicit = Object.entries(profile.implicit_interests || {})

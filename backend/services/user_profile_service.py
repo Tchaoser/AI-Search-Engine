@@ -202,6 +202,32 @@ def aggregate_clicks(user_id: str, recency_decay_days: float = 30.0, session_dec
     return dict(domain_counts)
 
 
+def get_profile_insight(user_id: str):
+    """
+    Returns a compact explanation of the current user profile.
+    """
+    profile = user_profiles_col.find_one({"user_id": user_id})
+
+    if not profile:
+        return None
+
+    implicit = profile.get("implicit_interests", {})
+
+    top = sorted(
+        implicit.items(),
+        key=lambda x: -x[1]
+    )[:5]
+
+    return {
+        "top_interests": [
+            {"interest": k, "score": round(v, 3)}
+            for k, v in top
+        ],
+        "query_history_size": len(profile.get("query_history", [])),
+        "click_history_size": len(profile.get("click_history", [])),
+        "profile_revision": profile.get("profile_revision", 0)
+    }
+
 def build_user_profile(user_id: str,
                        query_weight: float = 1.0,
                        click_weight: float = 2.0,
@@ -235,10 +261,21 @@ def build_user_profile(user_id: str,
 
     # Merge with tunable weights
     interests = defaultdict(float)
+    interest_sources = defaultdict(list)
     for k, v in keywords_scores.items():
-        interests[k] += v * query_weight
+        weighted = v * query_weight
+        interests[k] += weighted
+        interest_sources[k].append({
+            "source": "query",
+            "score": round(weighted, 3)
+        })
     for domain, v in clicks_scores.items():
-        interests[domain] += v * click_weight
+        weighted = v * click_weight
+        interests[domain] += weighted
+        interest_sources[domain].append({
+            "source": "click",
+            "score": round(weighted, 3)
+        })
 
     # read existing profile for explicit interests and exclusions
     existing_profile = user_profiles_col.find_one({"user_id": user_id}) or {}

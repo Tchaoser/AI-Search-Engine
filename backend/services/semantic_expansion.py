@@ -412,8 +412,6 @@ async def expand_query(
         "expanded_query": "",
         "top_explicit": [],
         "top_implicit": [],
-        "queries_considered": 0,
-        "interactions_considered": 0,
     }
 
 
@@ -490,8 +488,6 @@ async def expand_query(
                     )
 
                     trace["personalization_snippet"] = snippet
-                    trace["queries_considered"] = len(profile.get("query_history", []))
-                    trace["interactions_considered"] = len(profile.get("click_history", []))
 
                     if snippet:
                         system_prompt = (

@@ -11,6 +11,7 @@ export default function SearchPage() {
     const [error, setError] = useState(null);
     const [useEnhanced, setUseEnhanced] = useState(true);
     const [insight, setInsight] = useState(null);
+    const [profileInsight, setProfileInsight] = useState(null);
 
     useEffect(() => {
         const saved = localStorage.getItem("useEnhancedQuery");
@@ -28,6 +29,7 @@ export default function SearchPage() {
             setQueryId(data.query_id || null);
             setResults(Array.isArray(data.results) ? data.results : []);
             setInsight(data.insight || null);
+            setProfileInsight(data.profile_insight || null);
         } catch (err) {
             console.error(err);
             setError("Failed to fetch results. Is the backend running?");
@@ -104,9 +106,37 @@ export default function SearchPage() {
                         )}
 
                         <p><strong>Cache Status:</strong> {insight.cache_status}</p>
-                        <p><strong>Queries Considered:</strong> {insight.queries_considered || "—"}</p>
-                        <p><strong>Clicks Considered:</strong> {insight.interactions_considered || "—"}</p>
+                        {profileInsight && (
+                            <>
+                                <hr />
 
+                                <h4>Profile Signals</h4>
+
+                                {profileInsight.top_interests?.length > 0 && (
+                                    <p>
+                                        <strong>Top Interests:</strong>{" "}
+                                        {profileInsight.top_interests
+                                            .map(i => `${i.interest} (${i.score})`)
+                                            .join(", ")}
+                                    </p>
+                                )}
+
+                                <p>
+                                    <strong>Profile Revision:</strong>{" "}
+                                    {profileInsight.profile_revision ?? "—"}
+                                </p>
+
+                                <p>
+                                    <strong>Query History Size:</strong>{" "}
+                                    {profileInsight.query_history_size ?? "—"}
+                                </p>
+
+                                <p>
+                                    <strong>Click History Size:</strong>{" "}
+                                    {profileInsight.click_history_size ?? "—"}
+                                </p>
+                            </>
+                        )}
                     </>
                 ) : (
                     <p>No insights available yet.</p>

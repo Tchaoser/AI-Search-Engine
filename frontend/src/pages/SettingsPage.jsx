@@ -136,20 +136,12 @@ export default function SettingsPage() {
                             </p>
                         </div>
 
-                        <div className="dropdown" style={{ width: "320px" }}>
+                        <div className="dropdown" style={{ width: "360px" }}>
                             <select
                                 id="semantic-mode-select"
                                 className="settings-select"
                                 value={semanticMode}
                                 onChange={handleSemanticModeChange}
-                                style={{
-                                    width: "100%",
-                                    padding: "0.5rem",
-                                    borderRadius: "0.5rem",
-                                    border: "1px solid #cbd5e1",
-                                    background: "white",
-                                    cursor: "pointer",
-                                }}
                             >
                                 <option value="clarify_only">
                                     Conservative (only clarify intent using interests)

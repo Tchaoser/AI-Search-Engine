@@ -42,15 +42,17 @@ def _score_result(result: dict, profile: dict):
     return base
 
 
-def search(query: str, user_id: str = None):
+def search(query: str, user_id: str = None, benchmark_mode: bool = False):
     """
     Search pipeline:
     - proxy to Google Custom Search
     - optionally re-rank ONLY the top N results using the user's profile
+    - if benchmark_mode is True, skip all personalization/reranking
     """
     logger.debug("Search initiated", extra={
         "user_id": user_id,
-        "query": query
+        "query": query,
+        "benchmark_mode": benchmark_mode
     })
 
     results = search_google(query)
@@ -58,6 +60,11 @@ def search(query: str, user_id: str = None):
         "query": query,
         "result_count": len(results)
     })
+
+    # In benchmark mode, return raw results without any personalization
+    if benchmark_mode:
+        logger.debug("Benchmark mode: skipping personalization/reranking", extra={"query": query})
+        return results
 
     # No personalization without a user
     if not user_id:

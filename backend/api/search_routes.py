@@ -18,6 +18,7 @@ async def search_endpoint(
         use_enhanced: bool = Query(True),
         verbosity: str = Query("medium"),
         semantic_mode: str = Query("clarify_only"),
+        benchmark_mode: bool = Query(False),
         user_id: str = Depends(get_user_id_from_auth)
 ):
     """
@@ -65,7 +66,8 @@ async def search_endpoint(
         "query": q,
         "use_enhanced": use_enhanced,
         "verbosity": verbosity,
-        "semantic mode": semantic_mode
+        "semantic mode": semantic_mode,
+        "benchmark_mode": benchmark_mode
     })
 
     if use_enhanced:
@@ -125,10 +127,10 @@ async def search_endpoint(
     })
 
     # Perform search using the active query
-    results = search(enhanced, user_id=user_id)
+    results = search(enhanced, user_id=user_id, benchmark_mode=benchmark_mode)
 
-    # Fetch profile insight after search (profile builder may have updated interests)
-    profile_insight = get_profile_insight(user_id)
+    # Fetch profile insight after search (skip in benchmark mode)
+    profile_insight = None if benchmark_mode else get_profile_insight(user_id)
 
     # Measure duration
     elapsed_ms = round((time.time() - start_time) * 1000, 2)
@@ -138,7 +140,8 @@ async def search_endpoint(
         "duration_ms": elapsed_ms,
         "use_enhanced": use_enhanced,
         "verbosity": verbosity,
-        "semantic mode": semantic_mode
+        "semantic mode": semantic_mode,
+        "benchmark_mode": benchmark_mode
     })
 
     return {
@@ -149,6 +152,7 @@ async def search_endpoint(
         "use_enhanced": use_enhanced,
         "verbosity": verbosity,
         "semantic_mode": semantic_mode,
+        "benchmark_mode": benchmark_mode,
         "insight": insight,
         "profile_insight": profile_insight
     }

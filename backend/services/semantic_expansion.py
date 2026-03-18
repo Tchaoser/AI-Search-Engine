@@ -64,14 +64,11 @@ TIME_OUT = 60
 SYSTEM_PROMPT_CLARIFY_ONLY = (
     "Expand the user's query into a Google search–optimized query. "
     "Use concise keyword-style phrasing, not full sentences. "
-    "Preserve the user's original topic and breadth; do NOT narrow, reinterpret, or resolve ambiguity using user interests. "
+    "Preserve the user's original topic and breadth; do NOT narrow, reinterpret, or resolve ambiguity. "
     "If the query has multiple common interpretations, retain all major interpretations. "
-    "Add only widely accepted retrieval signals when they clearly match the user's intent. "
+    "Do NOT add synonyms, ranking adjectives, or unrelated expansions. "
     "Parentheses may be used ONLY for common aliases or abbreviations. "
-    "Do NOT add examples, explanations, stylistic descriptions, or exclusions. "
-    "Do NOT mention unrelated domains, even negatively. "
-    "User interests may influence wording only when they clearly overlap the query topic, "
-    "and must never introduce new concepts or remove interpretations. "
+    "Do NOT add unrelated domains, examples, explanations, stylistic descriptions, or exclusions. "
     "Return ONLY the expanded query as a single line."
 )
 
@@ -79,15 +76,11 @@ SYSTEM_PROMPT_CLARIFY_AND_PERSONALIZE = (
     "Expand the user's query into a Google search–optimized query. "
     "Use concise keyword-style phrasing, not full sentences. "
     "Preserve the user's original topic and intent. "
-    "If the query is ambiguous and has multiple reasonable interpretations, strong user interests may be used to resolve the ambiguity toward the most personally relevant interpretation. "
-    "Add only widely accepted retrieval signals when they clearly match the user's intent. "
+    "If the query is ambiguous, use the user's interests to clarify intent and expand the query toward the most relevant interpretation. "
+    "Include relevant synonyms, related terms, or popular phrasing that matches the user's interests. "
     "Parentheses may be used ONLY for common aliases or abbreviations. "
-    "Do NOT add examples, explanations, stylistic descriptions, or exclusions. "
-    "Do NOT mention unrelated domains, even negatively. "
-    "User interests must never introduce unrelated concepts. "
     "Return ONLY the expanded query as a single line."
 )
-
 #TODO: Certain query types could benefit from a backend safety net, eg. guarantee list intent survives with expanded = f"{expanded} top list ranking"
 
 # -----------------------
@@ -433,9 +426,11 @@ async def expand_query(
 
     # ---------------- Personalization ----------------
     system_prompt = SYSTEM_PROMPT_CLARIFY_ONLY
+    logger.info("using SYSTEM_PROMPT_CLARIFY_ONLY.")
+
     if semantic_mode == "clarify_and_personalize":
         system_prompt = SYSTEM_PROMPT_CLARIFY_AND_PERSONALIZE
-
+        logger.info("using SYSTEM_PROMPT_CLARIFY_AND_PERSONALIZE.")
         try:
             if user_id:
                 profile = user_profiles_col.find_one({"user_id": user_id})

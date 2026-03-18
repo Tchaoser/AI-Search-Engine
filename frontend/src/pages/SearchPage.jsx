@@ -99,10 +99,10 @@ export default function SearchPage() {
                         <p><strong>Verbosity:</strong> {insight.verbosity}</p>
 
                         {insight.top_explicit?.length > 0 && (
-                            <p><strong>Top Explicit Interests Used:</strong> {insight.top_explicit.join(", ")}</p>
+                            <p><strong>Top Explicit Interests:</strong> {insight.top_explicit.join(", ")}</p>
                         )}
                         {insight.top_implicit?.length > 0 && (
-                            <p><strong>Top Implicit Interests Used:</strong> {insight.top_implicit.join(", ")}</p>
+                            <p><strong>Top Implicit Interests:</strong> {insight.top_implicit.join(", ")}</p>
                         )}
 
                         <p><strong>Cache Status:</strong> {insight.cache_status}</p>

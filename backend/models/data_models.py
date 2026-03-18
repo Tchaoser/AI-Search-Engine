@@ -44,3 +44,24 @@ def make_user_profile_doc(user_id, interests, query_history, click_history, expl
         "explicit_interests": explicit_interests or [],
         "embedding": None
     }
+
+def make_benchmark_result_doc(query_id: str, experiment_arm: str, results: list):
+    """
+    Snapshot the top 5 search results for a benchmark query.
+    Each result entry contains rank, title, url, and snippet.
+    """
+    top_results = []
+    for rank, r in enumerate(results[:5], start=1):
+        top_results.append({
+            "rank": rank,
+            "title": r.get("title", ""),
+            "url": r.get("link", ""),
+            "snippet": r.get("snippet", ""),
+        })
+    return {
+        "_id": str(uuid.uuid4()),
+        "query_id": query_id,
+        "experiment_arm": experiment_arm,
+        "results": top_results,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }

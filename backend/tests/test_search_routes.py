@@ -191,3 +191,40 @@ class TestSearchRoutes:
             call_kwargs = mock_log.call_args
             metadata = call_kwargs[1]["benchmark_metadata"]
             assert metadata is None
+
+    def test_search_benchmark_stores_top5_results(self, client):
+        """Test that benchmark mode stores top 5 results via log_benchmark_results."""
+        fake_results = [
+            {"title": f"R{i}", "link": f"https://r{i}.com", "snippet": f"S{i}"}
+            for i in range(7)
+        ]
+        with patch("backend.api.utils.get_user_id_from_auth", return_value="bench_user"), \
+             patch("backend.api.search_routes.search", return_value=fake_results), \
+             patch("backend.api.search_routes.log_query", return_value="q_id"), \
+             patch("backend.api.search_routes.log_benchmark_results") as mock_log_br, \
+             patch("backend.api.search_routes.get_profile_insight", return_value=None):
+            response = client.get("/search?q=test&benchmark_mode=true&use_enhanced=false")
+            assert response.status_code == 200
+            mock_log_br.assert_called_once_with("q_id", "baseline", fake_results)
+
+    def test_search_benchmark_expanded_stores_results(self, client):
+        """Test that expanded benchmark stores results with 'expanded' arm."""
+        fake_results = [{"title": "R1", "link": "https://r1.com", "snippet": "S1"}]
+        with patch("backend.api.utils.get_user_id_from_auth", return_value="bench_user"), \
+             patch("backend.api.search_routes.search", return_value=fake_results), \
+             patch("backend.api.search_routes.log_query", return_value="q_id"), \
+             patch("backend.api.search_routes.log_benchmark_results") as mock_log_br, \
+             patch("backend.api.search_routes.get_profile_insight", return_value=None):
+            response = client.get("/search?q=test&benchmark_mode=true&use_enhanced=true&semantic_mode=clarify_only")
+            assert response.status_code == 200
+            mock_log_br.assert_called_once_with("q_id", "expanded", fake_results)
+
+    def test_search_normal_mode_does_not_store_benchmark_results(self, client, mock_search_service):
+        """Test that normal search does NOT call log_benchmark_results."""
+        with patch("backend.api.utils.get_user_id_from_auth", return_value="normal_user"), \
+             patch("backend.api.search_routes.log_query", return_value="q_id"), \
+             patch("backend.api.search_routes.log_benchmark_results") as mock_log_br, \
+             patch("backend.api.search_routes.get_profile_insight", return_value=None):
+            response = client.get("/search?q=test&use_enhanced=false")
+            assert response.status_code == 200
+            mock_log_br.assert_not_called()

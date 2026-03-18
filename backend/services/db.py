@@ -28,7 +28,9 @@ user_profiles_col = db["user_profiles"]
 users_col = db["users"]
 # Collection to track tokens that were discarded during preprocessing
 discarded_tokens_col = db["discarded_tokens"]
+# Collection to store benchmark result snapshots
+benchmark_results_col = db["benchmark_results"]
 
 logger.debug("Database collections initialized", extra={
-    "collections": ["queries", "interactions", "user_profiles", "users", "discarded_tokens"]
+    "collections": ["queries", "interactions", "user_profiles", "users", "discarded_tokens", "benchmark_results"]
 })

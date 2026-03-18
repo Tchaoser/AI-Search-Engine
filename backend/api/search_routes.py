@@ -1,7 +1,7 @@
 import time
 from fastapi import APIRouter, Query, Body, Depends, HTTPException
 from backend.services.search_service import search
-from backend.services.logging_service import log_query, log_interaction, log_feedback
+from backend.services.logging_service import log_query, log_interaction, log_feedback, log_benchmark_results
 from backend.services.semantic_expansion import expand_query
 from backend.services.logger import AppLogger
 from backend.api.utils import get_user_id_from_auth
@@ -139,6 +139,11 @@ async def search_endpoint(
 
     # Perform search using the active query
     results = search(enhanced, user_id=user_id, benchmark_mode=benchmark_mode)
+
+    # Store top 5 result snapshot for benchmark queries
+    if benchmark_mode:
+        experiment_arm = "expanded" if use_enhanced else "baseline"
+        log_benchmark_results(query_id, experiment_arm, results)
 
     # Fetch profile insight after search (skip in benchmark mode)
     profile_insight = None if benchmark_mode else get_profile_insight(user_id)

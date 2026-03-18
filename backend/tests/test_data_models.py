@@ -61,6 +61,35 @@ class TestMakeQueryDoc:
         doc = make_query_doc(user_id="u1", raw_text="")
         assert doc["raw_text"] == ""
 
+    def test_benchmark_metadata_not_present_by_default(self):
+        """When benchmark_metadata is not provided, key should be absent."""
+        doc = make_query_doc(user_id="u1", raw_text="q")
+        assert "benchmark_metadata" not in doc
+
+    def test_benchmark_metadata_stored_when_provided(self):
+        """When benchmark_metadata is provided, it should be stored in the document."""
+        metadata = {
+            "experiment_arm": "baseline",
+            "use_enhanced": False,
+            "semantic_mode": "clarify_only",
+            "benchmark_mode": True,
+        }
+        doc = make_query_doc(user_id="u1", raw_text="q", benchmark_metadata=metadata)
+        assert doc["benchmark_metadata"] == metadata
+        assert doc["benchmark_metadata"]["experiment_arm"] == "baseline"
+
+    def test_benchmark_metadata_expanded_arm(self):
+        """Expanded experiment arm should be stored correctly."""
+        metadata = {
+            "experiment_arm": "expanded",
+            "use_enhanced": True,
+            "semantic_mode": "clarify_only",
+            "benchmark_mode": True,
+        }
+        doc = make_query_doc(user_id="u1", raw_text="q", benchmark_metadata=metadata)
+        assert doc["benchmark_metadata"]["experiment_arm"] == "expanded"
+        assert doc["benchmark_metadata"]["use_enhanced"] is True
+
 
 class TestMakeInteractionDoc:
     """Test cases for make_interaction_doc."""

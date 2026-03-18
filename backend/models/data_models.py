@@ -1,17 +1,21 @@
 import uuid
 from datetime import datetime, timezone
 
-def make_query_doc(user_id: str, raw_text: str, enhanced_text: str = None):
+def make_query_doc(user_id: str, raw_text: str, enhanced_text: str = None, benchmark_metadata: dict = None):
     """
     Prepare a query document for insertion into MongoDB.
+    If benchmark_metadata is provided, it is stored alongside the query.
     """
-    return {
+    doc = {
         "_id": str(uuid.uuid4()),
         "user_id": user_id,
         "raw_text": raw_text,
         "enhanced_text": enhanced_text,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+    if benchmark_metadata is not None:
+        doc["benchmark_metadata"] = benchmark_metadata
+    return doc
 
 def make_interaction_doc(user_id: str, query_id: str, clicked_url: str, rank: int, action_type: str = "click"):
     """

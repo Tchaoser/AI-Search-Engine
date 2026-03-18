@@ -152,3 +152,42 @@ class TestSearchRoutes:
             assert data["use_enhanced"] is True
             assert data["semantic_mode"] == "clarify_only"
             assert data["benchmark_mode"] is True
+
+    def test_search_benchmark_mode_logs_experiment_metadata(self, client, mock_search_service):
+        """Test that benchmark mode passes experiment metadata to log_query."""
+        with patch("backend.api.utils.get_user_id_from_auth", return_value="bench_user"), \
+             patch("backend.api.search_routes.log_query", return_value="q_id") as mock_log, \
+             patch("backend.api.search_routes.get_profile_insight", return_value=None):
+            # Baseline run
+            response = client.get("/search?q=test&benchmark_mode=true&use_enhanced=false")
+            assert response.status_code == 200
+            call_kwargs = mock_log.call_args
+            metadata = call_kwargs[1]["benchmark_metadata"]
+            assert metadata is not None
+            assert metadata["benchmark_mode"] is True
+            assert metadata["experiment_arm"] == "baseline"
+            assert metadata["use_enhanced"] is False
+
+    def test_search_benchmark_mode_logs_expanded_arm(self, client, mock_search_service):
+        """Test that expanded benchmark run logs experiment_arm='expanded'."""
+        with patch("backend.api.utils.get_user_id_from_auth", return_value="bench_user"), \
+             patch("backend.api.search_routes.log_query", return_value="q_id") as mock_log, \
+             patch("backend.api.search_routes.get_profile_insight", return_value=None):
+            response = client.get("/search?q=test&benchmark_mode=true&use_enhanced=true&semantic_mode=clarify_only")
+            assert response.status_code == 200
+            call_kwargs = mock_log.call_args
+            metadata = call_kwargs[1]["benchmark_metadata"]
+            assert metadata["experiment_arm"] == "expanded"
+            assert metadata["use_enhanced"] is True
+            assert metadata["semantic_mode"] == "clarify_only"
+
+    def test_search_normal_mode_no_experiment_metadata(self, client, mock_search_service):
+        """Test that normal search does NOT attach experiment metadata."""
+        with patch("backend.api.utils.get_user_id_from_auth", return_value="normal_user"), \
+             patch("backend.api.search_routes.log_query", return_value="q_id") as mock_log, \
+             patch("backend.api.search_routes.get_profile_insight", return_value=None):
+            response = client.get("/search?q=test&use_enhanced=false")
+            assert response.status_code == 200
+            call_kwargs = mock_log.call_args
+            metadata = call_kwargs[1]["benchmark_metadata"]
+            assert metadata is None

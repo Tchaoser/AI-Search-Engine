@@ -5,19 +5,23 @@ from backend.services.logger import AppLogger
 logger = AppLogger.get_logger(__name__)
 
 
-def log_query(user_id: str, raw_text: str, enhanced_text: str = None):
+def log_query(user_id: str, raw_text: str, enhanced_text: str = None, benchmark_metadata: dict = None):
     """
     Create a query document and insert it into MongoDB.
+    
+    If benchmark_metadata is provided, it is stored with the query document
+    so benchmark runs can be identified during analysis.
     
     Returns the inserted document's ID.
     """
     try:
-        doc = make_query_doc(user_id, raw_text, enhanced_text)
+        doc = make_query_doc(user_id, raw_text, enhanced_text, benchmark_metadata=benchmark_metadata)
         queries_col.insert_one(doc)
         logger.debug("Query document inserted", extra={
             "user_id": user_id,
             "query_id": doc["_id"],
-            "raw_text_length": len(raw_text)
+            "raw_text_length": len(raw_text),
+            "has_benchmark_metadata": benchmark_metadata is not None
         })
         return doc["_id"]
     except Exception as e:

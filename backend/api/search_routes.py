@@ -115,11 +115,22 @@ async def search_endpoint(
         enhanced = q
         insight = None
 
+    # Build benchmark metadata when in benchmark mode
+    benchmark_metadata = None
+    if benchmark_mode:
+        benchmark_metadata = {
+            "experiment_arm": "expanded" if use_enhanced else "baseline",
+            "use_enhanced": use_enhanced,
+            "semantic_mode": semantic_mode,
+            "benchmark_mode": True,
+        }
+
     # Log the query in DB before search (helps personalization/reranking)
     query_id = log_query(
         user_id=user_id,
         raw_text=q,
-        enhanced_text=enhanced
+        enhanced_text=enhanced,
+        benchmark_metadata=benchmark_metadata
     )
     logger.debug("Query logged to database", extra={
         "user_id": user_id,

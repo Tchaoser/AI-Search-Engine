@@ -10,6 +10,7 @@ from backend.models.data_models import (
     make_interaction_doc,
     make_user_profile_doc,
     make_benchmark_result_doc,
+    make_relevance_judgment_doc,
 )
 
 
@@ -143,6 +144,31 @@ class TestMakeBenchmarkResultDoc:
         results = [{"title": "T", "link": "https://a.com", "snippet": "S"}]
         doc = make_benchmark_result_doc("q1", "baseline", results)
         assert len(doc["results"]) == 1
+
+
+class TestMakeRelevanceJudgmentDoc:
+    """Test cases for make_relevance_judgment_doc."""
+
+    def test_returns_required_keys(self):
+        """Document should contain all expected keys."""
+        judgments = [{"rank": 1, "relevant": True}]
+        doc = make_relevance_judgment_doc("br1", "evalA", judgments)
+        assert set(doc.keys()) == {"_id", "benchmark_result_id", "evaluator_id", "judgments", "timestamp"}
+
+    def test_stores_fields_correctly(self):
+        """Fields should be stored verbatim."""
+        judgments = [{"rank": 1, "relevant": True}, {"rank": 2, "relevant": False}]
+        doc = make_relevance_judgment_doc("br42", "evalB", judgments)
+        assert doc["benchmark_result_id"] == "br42"
+        assert doc["evaluator_id"] == "evalB"
+        assert len(doc["judgments"]) == 2
+        assert doc["judgments"][0]["relevant"] is True
+        assert doc["judgments"][1]["relevant"] is False
+
+    def test_id_is_unique(self):
+        """Each call should generate a unique _id."""
+        ids = {make_relevance_judgment_doc("b", "e", [])['_id'] for _ in range(20)}
+        assert len(ids) == 20
 
 
 class TestMakeInteractionDoc:

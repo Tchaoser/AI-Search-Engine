@@ -65,3 +65,16 @@ def make_benchmark_result_doc(query_id: str, experiment_arm: str, results: list)
         "results": top_results,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+def make_relevance_judgment_doc(benchmark_result_id: str, evaluator_id: str, judgments: list):
+    """
+    Store relevance labels for a benchmark result's top 5 results.
+    Each entry in judgments: {"rank": int, "relevant": bool}
+    """
+    return {
+        "_id": str(uuid.uuid4()),
+        "benchmark_result_id": benchmark_result_id,
+        "evaluator_id": evaluator_id,
+        "judgments": judgments,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }

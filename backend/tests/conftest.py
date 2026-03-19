@@ -21,6 +21,7 @@ mock_queries_col = MagicMock()
 mock_interactions_col = MagicMock()
 mock_discarded_tokens_col = MagicMock()
 mock_benchmark_results_col = MagicMock()
+mock_relevance_judgments_col = MagicMock()
 
 # Configure mock return values
 mock_users_col.find_one.return_value = None  # No existing user by default
@@ -32,6 +33,7 @@ with patch("backend.services.db.users_col", mock_users_col), \
      patch("backend.services.db.interactions_col", mock_interactions_col), \
      patch("backend.services.db.discarded_tokens_col", mock_discarded_tokens_col), \
      patch("backend.services.db.benchmark_results_col", mock_benchmark_results_col), \
+     patch("backend.services.db.relevance_judgments_col", mock_relevance_judgments_col), \
      patch("backend.background_tasks.background_tasks.start_background_tasks"), \
      patch("backend.background_tasks.background_tasks.stop_background_tasks"):
     from backend.main import app

@@ -7,6 +7,7 @@ import UserProfilePage from "./pages/UserProfilePage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
+import EvaluationPage from "./pages/EvaluationPage.jsx";
 
 export default function App() {
     return (
@@ -23,6 +24,7 @@ export default function App() {
                         <Route path="/settings" element={<SettingsPage />} />
                         <Route path="/login" element={<LoginPage />} />
                         <Route path="/register" element={<RegisterPage />} />
+                        <Route path="/evaluate" element={<EvaluationPage />} />
                     </Routes>
                 </main>
 

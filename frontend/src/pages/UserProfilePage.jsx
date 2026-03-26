@@ -94,7 +94,7 @@ export default function UserProfilePage() {
 
             {/* ================= EXPLICIT INTERESTS ================= */}
             <section className="profile-card">
-                <h3 className="profile-section-title">Explicit Interest</h3>
+                <h3 className="profile-section-title">Explicit Interests</h3>
 
                 <label htmlFor="new-interest" className="visually-hidden">
                     Add a new explicit interest
@@ -145,7 +145,10 @@ export default function UserProfilePage() {
                                 }}
                             />
 
-                            <span className="profile-score">
+                            <span
+                                className="profile-score"
+                                title={`Weight: ${weight.toFixed(1)}`}
+                            >
                                 {weight.toFixed(1)}
                             </span>
 
@@ -177,13 +180,18 @@ export default function UserProfilePage() {
 
             {/* ================= IMPLICIT INTERESTS ================= */}
             <section className="profile-card">
-                <h3 className="profile-section-title">Implicit Interest</h3>
+                <h3 className="profile-section-title">Implicit Interests</h3>
 
                 <div className="profile-list">
                     {implicitInterests.map(({ keyword, weight }) => (
                         <div className="profile-row" key={keyword}>
                             <span className="profile-keyword">{keyword}</span>
-                            <span className="profile-score">{weight.toFixed(1)}</span>
+                            <span
+                                className="profile-score"
+                                title={`Weight: ${weight.toFixed(1)}`}
+                            >
+                                {weight.toFixed(1)}
+                            </span>
 
                             <button
                                 className="profile-remove-btn"

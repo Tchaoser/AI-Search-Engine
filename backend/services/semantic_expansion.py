@@ -65,7 +65,7 @@ SYSTEM_PROMPT_CLARIFY_ONLY = (
     "You will receive a user's original_query. "
     "Expand the user's query into a Google search–optimized query. "
     "Use concise keyword-style phrasing, not full sentences."
-    "User interests (implicit and/or explicit) are provided. Do not allow user interests to resolve ambiguity whatsoever. "
+    # "User interests (implicit and/or explicit) are provided. Do not allow user interests to resolve ambiguity whatsoever. "
     "Preserve the user's original topic and breadth; do NOT narrow nor reinterpret. "
     "Do not use quotation marks. Do not explain your thought process. "
     "Return ONLY the expanded query as a single line."
@@ -407,6 +407,10 @@ async def expand_query(
         "expanded_query": "",
         "top_explicit": [],
         "top_implicit": [],
+        "used_interests": {
+            "explicit": {"strong": [], "medium": [], "weak": []},
+            "implicit": {"strong": [], "medium": [], "weak": []},
+        },
     }
 
 
@@ -450,8 +454,12 @@ async def expand_query(
                         seed,
                     )
 
-                    trace["top_explicit"] = top_explicit
-                    trace["top_implicit"] = top_implicit
+                    trace["top_explicit"] = [
+                        {"interest": k, "score": explicit_map[k]} for k in top_explicit
+                    ]
+                    trace["top_implicit"] = [
+                        {"interest": k, "score": implicit_map[k]} for k in top_implicit
+                    ]
 
                     # Reduce maps to selected interests only
                     explicit_map = {
@@ -483,6 +491,11 @@ async def expand_query(
                         explicit_tiers,
                         implicit_tiers,
                     )
+
+                    trace["used_interests"] = {
+                        "explicit": explicit_tiers,
+                        "implicit": implicit_tiers,
+                    }
 
                     trace["personalization_snippet"] = snippet
 

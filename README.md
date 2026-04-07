@@ -1,7 +1,6 @@
-## AI-Search-Engine
+# AI Search Engine
 
-AI-Search-Engine is a capstone project that explores personalized web search through lightweight, transparent AI.
-The system models user interests from search behavior and interactions to:
+AI-Search-Engine is a capstone project exploring personalized web search through lightweight AI enhancement. The system models user interests from search behavior and interactions to:
 
 * Adapt results over time based on evolving preferences
 * Clarify and enrich queries using semantic analysis
@@ -12,15 +11,29 @@ The goal is to improve search quality while keeping personalization visible and 
 
 ---
 
-## Tech Stack Overview
+# Tech Stack
 
-* **React** – Component-based frontend for building responsive, modular user interfaces  
-* **Vite** – Fast development tooling with hot module reloading  
-* **FastAPI (Python)** – Backend API for authentication, orchestration, and LLM integration  
-* **Uvicorn** – ASGI server for running the FastAPI backend  
-* **MongoDB** – Flexible storage for user profiles, queries, and interaction logs  
+Frontend
 
-This stack supports rapid prototyping while remaining scalable, modular, and well-suited for AI-driven personalization.
+* React — component-based UI
+* Vite — fast dev server and build tool
+
+Backend
+
+* FastAPI — API and orchestration
+* Uvicorn — ASGI server
+* Python 3.10+
+
+AI / Search
+
+* Ollama — local LLM inference
+* Google Custom Search API — web search results
+
+Database
+
+* MongoDB Atlas — user profiles, queries, interaction logs
+
+---
 
 ## Project Structure
 
@@ -109,340 +122,350 @@ frontend/
 └─ .env                             # Frontend environment variables (e.g., VITE_API_URL)
 ```
 
+# Environment Variables
+
+The project requires `.env` files for both backend and frontend.
+
+These files are **not committed** to the project repository for security reasons.
+
+Create them using the templates below. 
+
+Please Contact the developers (e.g., Peter Grose (PETERGROSE@cmail.carleton.ca) for assistance in connecting to the 
+    database, google API, LLM, or other external services if a new connection is not desired)
+
 ---
 
-# AI Search Engine: Development Setup & Integration Guide
+# Backend Environment Variables
 
-This document describes the required first-time setup and the steps needed during subsequent development sessions. Ollama is included in the initial setup because semantic expansion is part of normal development.
+Create:
+
+```
+backend/.env
+```
+
+## Required Configuration
+
+```
+# Google Custom Search
+GOOGLE_API_KEY=your_google_api_key
+GOOGLE_CX=your_custom_search_engine_id
+
+# MongoDB
+MONGODB_URI=your_mongodb_connection_string
+MONGODB_DB_NAME=ai_search_dev
+
+# Authentication
+SECRET_KEY=your_secret_key
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+```
+
+## Ollama / LLM
+
+```
+OLLAMA_URL=http://localhost:11434/
+OLLAMA_MODEL=llama3.1
+OLLAMA_TEMP=0.4
+```
+
+## Optional Cache Configuration
+
+```
+QUERY_CACHE_TTL=3600
+```
+
+Set to 0 to disable caching.
+
+## Optional Interest Selection Configuration
+
+```
+SE_INTEREST_SELECTION_ALGO=top_k
+SE_EXP_TOP_K_EXPLICIT=5
+SE_EXP_TOP_K_IMPLICIT=5
+
+SE_HYBRID_CORE_N=2
+SE_HYBRID_POOL_SIZE=10
+SE_HYBRID_DETERMINISTIC=1
+```
+
+## Optional Security / Proxy
+
+```
+ENABLE_PINNING=False
+SECURE_PROXY_URL=http://localhost:8000
+```
 
 ---
 
-## First-Time Setup
+# Frontend Environment Variables
 
-These steps must be done once on a given machine.
+Create:
 
-### Prerequisites
+```
+frontend/.env
+```
+
+```
+VITE_API_URL=http://localhost:5000
+ENABLE_PINNING=False
+SECURE_PROXY_URL=http://localhost:8000
+```
+
+---
+
+# First-Time Setup
+
+## Prerequisites
 
 Install:
 
 * Node.js (v18+)
 * Python 3.10+
 * Git
-* An IDE such as IntelliJ or VS Code
-* Docker https://www.docker.com/products/docker-desktop/
+* Docker Desktop
+* Ollama
 
-### Clone the Repository
+---
 
-```bash
+# Clone Repository
+
+```
 git clone https://github.com/Tchaoser/AI-Search-Engine.git
 cd AI-Search-Engine
 ```
 
-### Frontend Setup
+---
 
-Install dependencies:
+# Backend Setup
 
-```bash
-cd frontend
-npm install
-```
+Create virtual environment:
 
-Create `frontend/.env`:
+Windows:
 
 ```
-VITE_API_URL=http://localhost:5000
-```
-
-This file is git-ignored.
-
-### Backend Setup
-
-Create and activate a virtual environment:
-
-```powershell
-cd ../backend
+cd backend
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 ```
 
-(macOS/Linux: `source venv/bin/activate`)
+macOS/Linux:
 
-Install backend dependencies:
+```
+cd backend
+python -m venv venv
+source venv/bin/activate
+```
 
-```bash
+Install dependencies:
+
+```
 pip install -r requirements.txt
 ```
-### Cache control setup
 
-In the .env file for backend this value is an optional control to modify the lifespan of stored queries; its in seconds
+---
 
-QUERY_CACHE_TTL = 3600
+# Frontend Setup
 
-set QUERY_CACHE_TTL = 0 to disable cache
+```
+cd frontend
+npm install
+```
 
+---
 
-### Docker Installation and Setup
-Prerequisites:
+# Ollama Setup
 
-Install WSL (Windows Subsystem for Linux)
-Open PowerShell as Administrator and run:
-wsl --install
-
-Install Docker Desktop for Windows
-
-Download Docker Desktop:
-https://www.docker.com/products/docker-desktop/
-
-During installation:
-Enable WSL 2 integration
-Make sure Docker uses the WSL backend
-Restart your computer if prompted.
-
-First time setup of the docker:
-
-Step 1 — Start the Ollama container
-docker compose up -d ollama
-
-This starts only the Ollama service in the background.
-
-Step 2 — Download the Model
-docker exec -it ollama ollama pull llama3.1
-
-
-If GPU memory is limited:
-
-docker exec -it ollama ollama pull llama3.2:3b
-
-The model will be stored in a Docker volume (ollama-data) and will persist between runs.
-
-Running full application:
-Once the model has been pulled, you can simply run:
-
-docker compose up --build
-
-Or in detached mode:
-
-docker compose up -d --build
-
-That will:
-
-Start Ollama
-
-Start the backend
-
-Start the frontend
-### Ollama Installation and Model Setup
-
-Install Ollama based on your operating system:
-
-**Windows**
-Install the official Ollama for Windows, then run:
+Install Ollama and start:
 
 ```
 ollama serve
 ```
 
-**macOS**
-
-```
-brew install --cask ollama
-ollama serve
-```
-
-**Linux**
-
-```
-curl -fsSL https://ollama.com/install.sh | sh
-ollama serve
-```
-
-Ollama listens on `http://127.0.0.1:11434` by default.
-
-Pull the model used by the backend:
+Pull model:
 
 ```
 ollama pull llama3.1
 ```
 
-If GPU memory is limited:
+Lower VRAM alternative:
 
 ```
 ollama pull llama3.2:3b
 ```
 
-### Backend Environment Configuration
+---
 
-Add the following to `backend/.env`:
+# Docker Setup (Optional)
+
+Start Ollama container:
 
 ```
-OLLAMA_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.1
-OLLAMA_TEMP=0.4
+docker compose up -d ollama
 ```
 
-`OLLAMA_TEMP` affects determinism:
+Pull model inside container:
 
-* 0.0–0.2: deterministic
-* 0.3–0.6: balanced (recommended)
-* 0.7–1.0: more creative
+```
+docker exec -it ollama ollama pull llama3.1
+```
 
-A value of `0.4` is appropriate for this project.
+Run full stack:
+
+```
+docker compose up --build
+```
+
+Detached:
+
+```
+docker compose up -d --build
+```
 
 ---
 
-## Daily Development Workflow
+# Running the Application
 
-These steps must be performed each time you begin a development session.
+Start backend:
 
-1. Start Ollama:
+```
+cd backend
+.\venv\Scripts\Activate.ps1
+uvicorn main:app --reload --port 5000
+```
 
-   ```
-   ollama serve
-   ```
+Start frontend:
 
-2. Activate the backend virtual environment:
+```
+cd frontend
+npm run dev
+```
 
-   ```
-   cd backend
-   .\venv\Scripts\Activate.ps1
-   ```
+Open:
 
-   (macOS/Linux: `source venv/bin/activate`)
-
-3. Run the backend:
-
-   ```
-   uvicorn main:app --reload --port 5000
-   ```
-
-4. Run the frontend:
-
-   ```
-   cd ../frontend
-   npm run dev
-   ```
-
-Open the printed local URL (typically `http://localhost:5173/`) in a browser. Entering a search query should return results, confirming frontend–backend integration.
+```
+http://localhost:5173
+```
 
 ---
 
-## Testing and Diagnostics
+# Daily Development Workflow
 
-update backend/.env to include this:
+1. Start Ollama
+
 ```
-# --- semantic expansion ---
-OLLAMA_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.1
-OLLAMA_TEMP=0.4
+ollama serve
 ```
 
-Check that Ollama is responding:
+2. Start backend
+
+```
+cd backend
+uvicorn main:app --reload --port 5000
+```
+
+3. Start frontend
+
+```
+cd frontend
+npm run dev
+```
+
+---
+
+# Testing
+
+Check Ollama:
 
 ```
 curl http://127.0.0.1:11434/api/tags
 ```
 
-Generate a simple response:
+Test generation:
 
 ```
 curl -s http://127.0.0.1:11434/api/generate \
-  -H "Content-Type: application/json" \
-  -d '{"model":"llama3.1","prompt":"say hi","stream":false}'
+-H "Content-Type: application/json" \
+-d '{"model":"llama3.1","prompt":"say hi","stream":false}'
 ```
 
-Test end-to-end semantic expansion through the backend:
+Test search endpoint:
 
 ```
-curl -s "http://localhost:5000/search?q=solar%20panel%20tax%20incentives"
+curl "http://localhost:5000/search?q=test"
 ```
-
-A valid JSON response and backend logs showing both raw and expanded queries confirm the system is working.
 
 ---
 
-## Troubleshooting
+# Personalization Model
 
-**Port 11434 already in use**
+The system models two types of interests:
+
+Explicit interests
+
+* user-defined
+* normalized weights 0..1
+
+Implicit interests
+
+* inferred from behavior
+* numeric scoring
+
+These are never merged and are provided separately to the LLM.
+
+---
+
+# Interest Selection Algorithms
+
+Top-K (default)
+
+* deterministic
+* most stable
+
+Hybrid
+
+* deterministic core
+* sampled tail
+* optional deterministic sampling
+
+Configured via environment variables.
+
+---
+
+# Troubleshooting
+
+Port already in use:
 
 ```
 netstat -ano | findstr :11434
+```
+
+Kill process:
+
+```
 taskkill /PID <PID> /F
 ```
 
-**GPU/VRAM errors**
+Disable GPU:
 
 ```
 set OLLAMA_NO_GPU=1
 ollama serve
 ```
 
-or pull a smaller model:
+MongoDB connection issues:
 
-```
-ollama pull llama3.2:3b
-```
+Whitelist IP in MongoDB Atlas Network Access.
 
-**Changing Ollama port**
+---
 
-```
-set OLLAMA_HOST=127.0.0.1:11435
-ollama serve
-```
+# Security Notes
 
-Update `OLLAMA_URL` in `.env`.
+* `.env` files are ignored by git
+* do not commit API keys
+* rotate keys before submission
+* use `.env.example` templates for distribution
 
-**MongoDB SSL handshake or connection error**
-The IP is not whitelisted.
-In MongoDB Atlas: Database → Network Access → IP Access List → Add current IP.
+---
 
-## Interest Selection & Personalization Logic
+# License
 
-User personalization is intentionally lightweight, transparent, and configurable.
-
-The backend models two independent types of interests:
-
-- **Explicit interests** – user-declared keywords with weights in the range 0..1
-- **Implicit interests** – inferred keywords with numeric scores derived from behavior
-
-These interests are **never mixed or rescaled**. They are handled independently and provided to the LLM only as soft context.
-
-### Interest Selection Algorithms
-
-The system supports multiple interest-selection strategies, controlled via environment variables:
-
-#### 1) Top-K (legacy, default)
-- Deterministically selects the top-K explicit and top-K implicit interests
-- Always returns the same interests for the same profile
-- Most stable and conservative behavior
-
-#### 2) Hybrid (deterministic core + sampled tail)
-- Always includes the strongest N interests
-- Fills remaining slots by sampling from the next-best interests
-- Preserves user identity while introducing controlled diversity
-- Sampling can be deterministic (stable per user/query) or randomized
-
-The selection algorithm is applied **before** interest tiering (strong / medium / weak) and verbosity filtering.
-
-By default, the system continues to use top-K selection unless explicitly configured otherwise.
-
-### Interest Selection Configuration
-
-The interest-selection algorithm used during semantic expansion is configurable.
-
-```env
-# Interest-selection algorithm
-# - top_k  : legacy deterministic top-K selection
-# - hybrid : deterministic core + sampled tail
-SE_INTEREST_SELECTION_ALGO=top_k
-
-# Top-K sizes (used by both algorithms)
-SE_EXP_TOP_K_EXPLICIT=5
-SE_EXP_TOP_K_IMPLICIT=5
-
-# Hybrid-specific tuning (used only when algo=hybrid)
-SE_HYBRID_CORE_N=2
-SE_HYBRID_POOL_SIZE=10
-
-# If 1, sampling is deterministic per (user_id, query)
-# If 0, sampling is random on each request
-SE_HYBRID_DETERMINISTIC=1
+SYSC 4907 Group 9 Capstone engineering project. For educational use only.

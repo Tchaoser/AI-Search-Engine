@@ -320,11 +320,11 @@ def build_user_profile(user_id: str,
     # Persist profile
     try:
         user_profiles_col.update_one({"user_id": user_id}, {"$set": profile_doc}, upsert=True)
-        logger.info("User profile saved", extra={
-            "user_id": user_id,
-            "implicit_count": len(filtered_interests),
-            "explicit_count": len(explicit_interests)
-        })
+#         logger.info("User profile saved", extra={
+#             "user_id": user_id,
+#             "implicit_count": len(filtered_interests),
+#             "explicit_count": len(explicit_interests)
+#         })
     except Exception as e:
         logger.error("Failed to save user profile", extra={
             "user_id": user_id,

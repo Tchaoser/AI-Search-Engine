@@ -15,23 +15,23 @@ The goal is to improve search quality while keeping personalization visible and 
 
 Frontend
 
-* React — component-based UI
-* Vite — fast dev server and build tool
+* React: component-based UI
+* Vite: fast dev server and build tool
 
 Backend
 
-* FastAPI — API and orchestration
-* Uvicorn — ASGI server
+* FastAPI: API and orchestration
+* Uvicorn: ASGI server
 * Python 3.10+
 
 AI / Search
 
-* Ollama — local LLM inference
-* Google Custom Search API — web search results
+* Ollama: local LLM inference
+* Google Custom Search API: web search results
 
 Database
 
-* MongoDB Atlas — user profiles, queries, interaction logs
+* MongoDB Atlas: user profiles, queries, interaction logs
 
 ---
 

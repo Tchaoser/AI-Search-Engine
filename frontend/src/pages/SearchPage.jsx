@@ -97,14 +97,6 @@ export default function SearchPage() {
                         <p><strong>Enhanced Query:</strong> {insight.expanded_query || "—"}</p>
                         <p><strong>Semantic Mode:</strong> {insight.semantic_mode}</p>
                         <p><strong>Verbosity:</strong> {insight.verbosity}</p>
-
-                        {insight.top_explicit?.length > 0 && (
-                            <p><strong>Top Explicit Interests:</strong> {insight.top_explicit.join(", ")}</p>
-                        )}
-                        {insight.top_implicit?.length > 0 && (
-                            <p><strong>Top Implicit Interests:</strong> {insight.top_implicit.join(", ")}</p>
-                        )}
-
                         <p><strong>Cache Status:</strong> {insight.cache_status}</p>
                         {profileInsight && (
                             <>
@@ -112,13 +104,42 @@ export default function SearchPage() {
 
                                 <h4>Profile Signals</h4>
 
-                                {profileInsight.top_interests?.length > 0 && (
-                                    <p>
-                                        <strong>Top Interests:</strong>{" "}
-                                        {profileInsight.top_interests
-                                            .map(i => `${i.interest} (${i.score})`)
-                                            .join(", ")}
-                                    </p>
+                                <div>
+                                    <strong>Top Explicit Interests</strong>
+                                    <ul>
+                                        {insight.top_explicit.map((e) => (
+                                            <li key={e.interest}>
+                                                {e.interest} ({e.score.toFixed(2)})
+                                            </li>
+                                        ))}
+                                    </ul>
+
+                                    <strong>Top Implicit Interests</strong>
+                                    <ul>
+                                        {insight.top_implicit.map((i) => (
+                                            <li key={i.interest}>
+                                                {i.interest} ({i.score.toFixed(2)})
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+
+                                {insight.used_interests && (
+                                    <>
+                                        <p>
+                                            <strong>Used Explicit Interests:</strong>{" "}
+                                            {["strong", "medium", "weak"]
+                                                .flatMap(tier => insight.used_interests.explicit[tier] || [])
+                                                .join(", ") || "—"}
+                                        </p>
+
+                                        <p>
+                                            <strong>Used Implicit Interests:</strong>{" "}
+                                            {["strong", "medium", "weak"]
+                                                .flatMap(tier => insight.used_interests.implicit[tier] || [])
+                                                .join(", ") || "—"}
+                                        </p>
+                                    </>
                                 )}
 
                                 <p>

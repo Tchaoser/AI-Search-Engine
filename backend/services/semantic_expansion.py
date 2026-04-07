@@ -62,26 +62,26 @@ TIME_OUT = 60
 # Stronger relevance gating may be added later at the application layer.
 
 SYSTEM_PROMPT_CLARIFY_ONLY = (
+    "You will receive a user's original_query. "
     "Expand the user's query into a Google search–optimized query. "
-    "Use concise keyword-style phrasing, not full sentences. "
-    "Preserve the user's original topic and breadth; do NOT narrow, reinterpret, or resolve ambiguity. "
-    "If the query has multiple common interpretations, retain all major interpretations. "
-    "Do NOT add synonyms, ranking adjectives, or unrelated expansions. "
-    "Parentheses may be used ONLY for common aliases or abbreviations. "
-    "Do NOT add unrelated domains, examples, explanations, stylistic descriptions, or exclusions. "
+    "Use concise keyword-style phrasing, not full sentences."
+    # "User interests (implicit and/or explicit) are provided. Do not allow user interests to resolve ambiguity whatsoever. "
+    "Preserve the user's original topic and breadth; do NOT narrow nor reinterpret. "
+    "Do not use quotation marks. Do not explain your thought process. "
     "Return ONLY the expanded query as a single line."
 )
 
 SYSTEM_PROMPT_CLARIFY_AND_PERSONALIZE = (
+    "You will receive a user's original_query. "
     "Expand the user's query into a Google search–optimized query. "
     "Use concise keyword-style phrasing, not full sentences. "
-    "Preserve the user's original topic and intent. "
-    "If the query is ambiguous, use the user's interests to clarify intent and expand the query toward the most relevant interpretation. "
-    "Include relevant synonyms, related terms, or popular phrasing that matches the user's interests. "
-    "Parentheses may be used ONLY for common aliases or abbreviations. "
+    "User interests (implicit and/or explicit) are provided. Do not allow user interests to resolve ambiguity, only use them clarify the user's original_query if directly related. "
+    "Preserve the user's original topic and intent without adding User interests. "
+    "For example, if the user is interested in baking, do not suggest baking unless the query is related to baking. "
+    "If the user is interested in software, do not suggest software unless the query is related to software. "
+    "Do not use quotation marks. Do not explain your thought process."
     "Return ONLY the expanded query as a single line."
 )
-#TODO: Certain query types could benefit from a backend safety net, eg. guarantee list intent survives with expanded = f"{expanded} top list ranking"
 
 # -----------------------
 # Normalize and Truncate
@@ -308,14 +308,14 @@ def _format_personalization_snippet(explicit: Dict[str, List[str]], implicit: Di
     if not parts:
         return ""
 
-    snippet = "User interests provided for context: " + "; ".join(parts) + "."
+    snippet = "User interests: " + "; ".join(parts) + "."
     snippet = _normalize_single_line(snippet)
 
     if MAX_SNIPPET_CHARS > 0:
         snippet = _truncate_text(
             snippet,
             MAX_SNIPPET_CHARS,
-            context="Personalization snippet",
+            context="Personalization snippet consisting of user interests. Ignore if not obviously relevant to the user's original_query domain.",
         )
     return snippet
 
@@ -376,6 +376,8 @@ async def expand_query(
     """
 
     semantic_mode = (semantic_mode or "clarify_only").lower()
+#     logger.info(semantic_mode)
+
     if semantic_mode not in {"clarify_only", "clarify_and_personalize"}:
         semantic_mode = "clarify_only"
 
@@ -405,6 +407,10 @@ async def expand_query(
         "expanded_query": "",
         "top_explicit": [],
         "top_implicit": [],
+        "used_interests": {
+            "explicit": {"strong": [], "medium": [], "weak": []},
+            "implicit": {"strong": [], "medium": [], "weak": []},
+        },
     }
 
 
@@ -448,8 +454,12 @@ async def expand_query(
                         seed,
                     )
 
-                    trace["top_explicit"] = top_explicit
-                    trace["top_implicit"] = top_implicit
+                    trace["top_explicit"] = [
+                        {"interest": k, "score": explicit_map[k]} for k in top_explicit
+                    ]
+                    trace["top_implicit"] = [
+                        {"interest": k, "score": implicit_map[k]} for k in top_implicit
+                    ]
 
                     # Reduce maps to selected interests only
                     explicit_map = {
@@ -481,6 +491,11 @@ async def expand_query(
                         explicit_tiers,
                         implicit_tiers,
                     )
+
+                    trace["used_interests"] = {
+                        "explicit": explicit_tiers,
+                        "implicit": implicit_tiers,
+                    }
 
                     trace["personalization_snippet"] = snippet
 

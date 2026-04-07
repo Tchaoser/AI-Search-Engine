@@ -1,7 +1,7 @@
 import time
 from fastapi import APIRouter, Query, Body, Depends, HTTPException
 from backend.services.search_service import search
-from backend.services.logging_service import log_query, log_interaction, log_feedback
+from backend.services.logging_service import log_query, log_interaction, log_feedback, log_benchmark_results
 from backend.services.semantic_expansion import expand_query
 from backend.services.logger import AppLogger
 from backend.api.utils import get_user_id_from_auth
@@ -18,6 +18,7 @@ async def search_endpoint(
         use_enhanced: bool = Query(True),
         verbosity: str = Query("medium"),
         semantic_mode: str = Query("clarify_only"),
+        benchmark_mode: bool = Query(False),
         user_id: str = Depends(get_user_id_from_auth)
 ):
     """
@@ -65,7 +66,8 @@ async def search_endpoint(
         "query": q,
         "use_enhanced": use_enhanced,
         "verbosity": verbosity,
-        "semantic mode": semantic_mode
+        "semantic mode": semantic_mode,
+        "benchmark_mode": benchmark_mode
     })
 
     if use_enhanced:
@@ -113,11 +115,22 @@ async def search_endpoint(
         enhanced = q
         insight = None
 
+    # Build benchmark metadata when in benchmark mode
+    benchmark_metadata = None
+    if benchmark_mode:
+        benchmark_metadata = {
+            "experiment_arm": "expanded" if use_enhanced else "baseline",
+            "use_enhanced": use_enhanced,
+            "semantic_mode": semantic_mode,
+            "benchmark_mode": True,
+        }
+
     # Log the query in DB before search (helps personalization/reranking)
     query_id = log_query(
         user_id=user_id,
         raw_text=q,
-        enhanced_text=enhanced
+        enhanced_text=enhanced,
+        benchmark_metadata=benchmark_metadata
     )
     logger.debug("Query logged to database", extra={
         "user_id": user_id,
@@ -125,10 +138,15 @@ async def search_endpoint(
     })
 
     # Perform search using the active query
-    results = search(enhanced, user_id=user_id)
+    results = search(enhanced, user_id=user_id, benchmark_mode=benchmark_mode)
 
-    # Fetch profile insight after search (profile builder may have updated interests)
-    profile_insight = get_profile_insight(user_id)
+    # Store top 5 result snapshot for benchmark queries
+    if benchmark_mode:
+        experiment_arm = "expanded" if use_enhanced else "baseline"
+        log_benchmark_results(query_id, experiment_arm, results)
+
+    # Fetch profile insight after search (skip in benchmark mode)
+    profile_insight = None if benchmark_mode else get_profile_insight(user_id)
 
     # Measure duration
     elapsed_ms = round((time.time() - start_time) * 1000, 2)
@@ -138,7 +156,8 @@ async def search_endpoint(
         "duration_ms": elapsed_ms,
         "use_enhanced": use_enhanced,
         "verbosity": verbosity,
-        "semantic mode": semantic_mode
+        "semantic mode": semantic_mode,
+        "benchmark_mode": benchmark_mode
     })
 
     return {
@@ -149,6 +168,7 @@ async def search_endpoint(
         "use_enhanced": use_enhanced,
         "verbosity": verbosity,
         "semantic_mode": semantic_mode,
+        "benchmark_mode": benchmark_mode,
         "insight": insight,
         "profile_insight": profile_insight
     }

@@ -1,23 +1,27 @@
-from backend.services.db import queries_col, interactions_col
-from backend.models.data_models import make_query_doc, make_interaction_doc
+from backend.services.db import queries_col, interactions_col, benchmark_results_col
+from backend.models.data_models import make_query_doc, make_interaction_doc, make_benchmark_result_doc
 from backend.services.logger import AppLogger
 
 logger = AppLogger.get_logger(__name__)
 
 
-def log_query(user_id: str, raw_text: str, enhanced_text: str = None):
+def log_query(user_id: str, raw_text: str, enhanced_text: str = None, benchmark_metadata: dict = None):
     """
     Create a query document and insert it into MongoDB.
+    
+    If benchmark_metadata is provided, it is stored with the query document
+    so benchmark runs can be identified during analysis.
     
     Returns the inserted document's ID.
     """
     try:
-        doc = make_query_doc(user_id, raw_text, enhanced_text)
+        doc = make_query_doc(user_id, raw_text, enhanced_text, benchmark_metadata=benchmark_metadata)
         queries_col.insert_one(doc)
         logger.debug("Query document inserted", extra={
             "user_id": user_id,
             "query_id": doc["_id"],
-            "raw_text_length": len(raw_text)
+            "raw_text_length": len(raw_text),
+            "has_benchmark_metadata": benchmark_metadata is not None
         })
         return doc["_id"]
     except Exception as e:
@@ -90,6 +94,29 @@ def log_feedback(user_id: str, query_id: str, result_url: str, rank: int, is_pos
             "user_id": user_id,
             "query_id": query_id,
             "action_type": action_type,
+            "error": str(e),
+        }, exc_info=True)
+        raise
+
+
+def log_benchmark_results(query_id: str, experiment_arm: str, results: list):
+    """
+    Store a snapshot of the top 5 results for a benchmark query.
+    Links results to the query_id and experiment arm.
+    """
+    try:
+        doc = make_benchmark_result_doc(query_id, experiment_arm, results)
+        benchmark_results_col.insert_one(doc)
+        logger.debug("Benchmark results snapshot stored", extra={
+            "query_id": query_id,
+            "experiment_arm": experiment_arm,
+            "result_count": len(doc["results"]),
+        })
+        return doc["_id"]
+    except Exception as e:
+        logger.error("Failed to log benchmark results", extra={
+            "query_id": query_id,
+            "experiment_arm": experiment_arm,
             "error": str(e),
         }, exc_info=True)
         raise

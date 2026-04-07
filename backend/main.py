@@ -5,6 +5,7 @@ from backend.api.auth_routes import router as auth_router
 from backend.api.search_routes import router as search_router
 from backend.api.profile_routes import router as profile_router
 from backend.api.setting_routes import router as settings_router
+from backend.api.benchmark_routes import router as benchmark_router
 from backend.background_tasks.background_tasks import start_background_tasks, stop_background_tasks
 from backend.services.logger import AppLogger
 
@@ -47,6 +48,7 @@ app.include_router(auth_router)
 app.include_router(search_router)
 app.include_router(profile_router)
 app.include_router(settings_router)
+app.include_router(benchmark_router)
 
 
 # Simple health check endpoint, can be removed

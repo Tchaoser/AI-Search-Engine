@@ -33,7 +33,7 @@ class TestLogQuery:
             result = log_query("user_123", "python tutorials")
             
             # Assert
-            mock_make_doc.assert_called_once_with("user_123", "python tutorials", None)
+            mock_make_doc.assert_called_once_with("user_123", "python tutorials", None, benchmark_metadata=None)
             mock_queries_col.insert_one.assert_called_once_with(mock_doc)
             assert result == "generated_id_123"
 
@@ -67,7 +67,8 @@ class TestLogQuery:
             mock_make_doc.assert_called_once_with(
                 "user_456", 
                 "machine learning", 
-                "machine learning algorithms tutorials beginners"
+                "machine learning algorithms tutorials beginners",
+                benchmark_metadata=None
             )
             mock_queries_col.insert_one.assert_called_once_with(mock_doc)
             assert result == "generated_id_456"
@@ -147,8 +148,105 @@ class TestLogQuery:
             result = log_query("user_empty", "")
             
             # Assert
-            mock_make_doc.assert_called_once_with("user_empty", "", None)
+            mock_make_doc.assert_called_once_with("user_empty", "", None, benchmark_metadata=None)
             assert result == "id_empty"
+
+    def test_log_query_with_benchmark_metadata(self):
+        """Test that log_query passes benchmark_metadata to make_query_doc."""
+        mock_queries_col = MagicMock()
+        metadata = {
+            "experiment_arm": "expanded",
+            "use_enhanced": True,
+            "semantic_mode": "clarify_only",
+            "benchmark_mode": True,
+        }
+
+        with patch("backend.services.logging_service.queries_col", mock_queries_col), \
+             patch("backend.services.logging_service.make_query_doc") as mock_make_doc:
+
+            mock_doc = {
+                "_id": "bench_id",
+                "user_id": "user_bench",
+                "raw_text": "test",
+                "enhanced_text": "expanded test",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "benchmark_metadata": metadata,
+            }
+            mock_make_doc.return_value = mock_doc
+
+            from backend.services.logging_service import log_query
+            result = log_query("user_bench", "test", "expanded test", benchmark_metadata=metadata)
+
+            mock_make_doc.assert_called_once_with(
+                "user_bench", "test", "expanded test", benchmark_metadata=metadata
+            )
+            mock_queries_col.insert_one.assert_called_once_with(mock_doc)
+            assert result == "bench_id"
+
+    def test_log_query_without_benchmark_metadata(self):
+        """Test that normal queries pass no benchmark_metadata."""
+        mock_queries_col = MagicMock()
+
+        with patch("backend.services.logging_service.queries_col", mock_queries_col), \
+             patch("backend.services.logging_service.make_query_doc") as mock_make_doc:
+
+            mock_doc = {
+                "_id": "normal_id",
+                "user_id": "user_normal",
+                "raw_text": "test",
+                "enhanced_text": None,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+            mock_make_doc.return_value = mock_doc
+
+            from backend.services.logging_service import log_query
+            log_query("user_normal", "test")
+
+            mock_make_doc.assert_called_once_with(
+                "user_normal", "test", None, benchmark_metadata=None
+            )
+
+
+class TestLogBenchmarkResults:
+    """Test cases for log_benchmark_results function."""
+
+    def test_log_benchmark_results_inserts_doc(self):
+        """Test that log_benchmark_results inserts a document into benchmark_results_col."""
+        mock_col = MagicMock()
+        results = [
+            {"title": "R1", "link": "https://r1.com", "snippet": "S1"},
+            {"title": "R2", "link": "https://r2.com", "snippet": "S2"},
+        ]
+
+        with patch("backend.services.logging_service.benchmark_results_col", mock_col), \
+             patch("backend.services.logging_service.make_benchmark_result_doc") as mock_make:
+            mock_make.return_value = {
+                "_id": "br_id",
+                "query_id": "q1",
+                "experiment_arm": "baseline",
+                "results": [],
+                "timestamp": "2026-03-18T00:00:00",
+            }
+
+            from backend.services.logging_service import log_benchmark_results
+            result_id = log_benchmark_results("q1", "baseline", results)
+
+            mock_make.assert_called_once_with("q1", "baseline", results)
+            mock_col.insert_one.assert_called_once()
+            assert result_id == "br_id"
+
+    def test_log_benchmark_results_raises_on_db_error(self):
+        """Test that log_benchmark_results raises on database error."""
+        mock_col = MagicMock()
+        mock_col.insert_one.side_effect = Exception("DB error")
+
+        with patch("backend.services.logging_service.benchmark_results_col", mock_col), \
+             patch("backend.services.logging_service.make_benchmark_result_doc") as mock_make:
+            mock_make.return_value = {"_id": "br_id", "query_id": "q1", "experiment_arm": "baseline", "results": [], "timestamp": "t"}
+
+            from backend.services.logging_service import log_benchmark_results
+            with pytest.raises(Exception, match="DB error"):
+                log_benchmark_results("q1", "baseline", [])
 
 
 class TestLogInteraction:

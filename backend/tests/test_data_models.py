@@ -9,6 +9,8 @@ from backend.models.data_models import (
     make_query_doc,
     make_interaction_doc,
     make_user_profile_doc,
+    make_benchmark_result_doc,
+    make_relevance_judgment_doc,
 )
 
 
@@ -60,6 +62,113 @@ class TestMakeQueryDoc:
         """An empty raw_text string should be stored without error."""
         doc = make_query_doc(user_id="u1", raw_text="")
         assert doc["raw_text"] == ""
+
+    def test_benchmark_metadata_not_present_by_default(self):
+        """When benchmark_metadata is not provided, key should be absent."""
+        doc = make_query_doc(user_id="u1", raw_text="q")
+        assert "benchmark_metadata" not in doc
+
+    def test_benchmark_metadata_stored_when_provided(self):
+        """When benchmark_metadata is provided, it should be stored in the document."""
+        metadata = {
+            "experiment_arm": "baseline",
+            "use_enhanced": False,
+            "semantic_mode": "clarify_only",
+            "benchmark_mode": True,
+        }
+        doc = make_query_doc(user_id="u1", raw_text="q", benchmark_metadata=metadata)
+        assert doc["benchmark_metadata"] == metadata
+        assert doc["benchmark_metadata"]["experiment_arm"] == "baseline"
+
+    def test_benchmark_metadata_expanded_arm(self):
+        """Expanded experiment arm should be stored correctly."""
+        metadata = {
+            "experiment_arm": "expanded",
+            "use_enhanced": True,
+            "semantic_mode": "clarify_only",
+            "benchmark_mode": True,
+        }
+        doc = make_query_doc(user_id="u1", raw_text="q", benchmark_metadata=metadata)
+        assert doc["benchmark_metadata"]["experiment_arm"] == "expanded"
+        assert doc["benchmark_metadata"]["use_enhanced"] is True
+
+
+class TestMakeBenchmarkResultDoc:
+    """Test cases for make_benchmark_result_doc."""
+
+    def test_returns_required_keys(self):
+        """Document should contain all expected keys."""
+        results = [{"title": "T", "link": "https://a.com", "snippet": "S"}]
+        doc = make_benchmark_result_doc("q1", "baseline", results)
+        assert set(doc.keys()) == {"_id", "query_id", "experiment_arm", "results", "timestamp"}
+
+    def test_stores_query_id_and_arm(self):
+        """query_id and experiment_arm should be stored verbatim."""
+        doc = make_benchmark_result_doc("q42", "expanded", [])
+        assert doc["query_id"] == "q42"
+        assert doc["experiment_arm"] == "expanded"
+
+    def test_captures_top_5_only(self):
+        """Only the first 5 results should be stored."""
+        results = [{"title": f"T{i}", "link": f"https://{i}.com", "snippet": f"S{i}"} for i in range(10)]
+        doc = make_benchmark_result_doc("q1", "baseline", results)
+        assert len(doc["results"]) == 5
+
+    def test_rank_positions_are_1_indexed(self):
+        """Rank positions should start at 1."""
+        results = [{"title": f"T{i}", "link": f"https://{i}.com", "snippet": f"S{i}"} for i in range(3)]
+        doc = make_benchmark_result_doc("q1", "baseline", results)
+        ranks = [r["rank"] for r in doc["results"]]
+        assert ranks == [1, 2, 3]
+
+    def test_result_fields_mapped_correctly(self):
+        """Each result entry should contain rank, title, url, snippet."""
+        results = [{"title": "My Title", "link": "https://example.com", "snippet": "My Snippet"}]
+        doc = make_benchmark_result_doc("q1", "baseline", results)
+        entry = doc["results"][0]
+        assert entry["rank"] == 1
+        assert entry["title"] == "My Title"
+        assert entry["url"] == "https://example.com"
+        assert entry["snippet"] == "My Snippet"
+
+    def test_missing_fields_default_to_empty_string(self):
+        """Missing title/link/snippet should default to empty strings."""
+        doc = make_benchmark_result_doc("q1", "baseline", [{}])
+        entry = doc["results"][0]
+        assert entry["title"] == ""
+        assert entry["url"] == ""
+        assert entry["snippet"] == ""
+
+    def test_fewer_than_5_results(self):
+        """Should handle fewer than 5 results without error."""
+        results = [{"title": "T", "link": "https://a.com", "snippet": "S"}]
+        doc = make_benchmark_result_doc("q1", "baseline", results)
+        assert len(doc["results"]) == 1
+
+
+class TestMakeRelevanceJudgmentDoc:
+    """Test cases for make_relevance_judgment_doc."""
+
+    def test_returns_required_keys(self):
+        """Document should contain all expected keys."""
+        judgments = [{"rank": 1, "relevant": True}]
+        doc = make_relevance_judgment_doc("br1", "evalA", judgments)
+        assert set(doc.keys()) == {"_id", "benchmark_result_id", "evaluator_id", "judgments", "timestamp"}
+
+    def test_stores_fields_correctly(self):
+        """Fields should be stored verbatim."""
+        judgments = [{"rank": 1, "relevant": True}, {"rank": 2, "relevant": False}]
+        doc = make_relevance_judgment_doc("br42", "evalB", judgments)
+        assert doc["benchmark_result_id"] == "br42"
+        assert doc["evaluator_id"] == "evalB"
+        assert len(doc["judgments"]) == 2
+        assert doc["judgments"][0]["relevant"] is True
+        assert doc["judgments"][1]["relevant"] is False
+
+    def test_id_is_unique(self):
+        """Each call should generate a unique _id."""
+        ids = {make_relevance_judgment_doc("b", "e", [])['_id'] for _ in range(20)}
+        assert len(ids) == 20
 
 
 class TestMakeInteractionDoc:

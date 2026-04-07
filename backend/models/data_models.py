@@ -1,17 +1,21 @@
 import uuid
 from datetime import datetime, timezone
 
-def make_query_doc(user_id: str, raw_text: str, enhanced_text: str = None):
+def make_query_doc(user_id: str, raw_text: str, enhanced_text: str = None, benchmark_metadata: dict = None):
     """
     Prepare a query document for insertion into MongoDB.
+    If benchmark_metadata is provided, it is stored alongside the query.
     """
-    return {
+    doc = {
         "_id": str(uuid.uuid4()),
         "user_id": user_id,
         "raw_text": raw_text,
         "enhanced_text": enhanced_text,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+    if benchmark_metadata is not None:
+        doc["benchmark_metadata"] = benchmark_metadata
+    return doc
 
 def make_interaction_doc(user_id: str, query_id: str, clicked_url: str, rank: int, action_type: str = "click"):
     """
@@ -39,4 +43,38 @@ def make_user_profile_doc(user_id, interests, query_history, click_history, expl
         "last_updated": datetime.now(timezone.utc).isoformat(),
         "explicit_interests": explicit_interests or [],
         "embedding": None
+    }
+
+def make_benchmark_result_doc(query_id: str, experiment_arm: str, results: list):
+    """
+    Snapshot the top 5 search results for a benchmark query.
+    Each result entry contains rank, title, url, and snippet.
+    """
+    top_results = []
+    for rank, r in enumerate(results[:5], start=1):
+        top_results.append({
+            "rank": rank,
+            "title": r.get("title", ""),
+            "url": r.get("link", ""),
+            "snippet": r.get("snippet", ""),
+        })
+    return {
+        "_id": str(uuid.uuid4()),
+        "query_id": query_id,
+        "experiment_arm": experiment_arm,
+        "results": top_results,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+def make_relevance_judgment_doc(benchmark_result_id: str, evaluator_id: str, judgments: list):
+    """
+    Store relevance labels for a benchmark result's top 5 results.
+    Each entry in judgments: {"rank": int, "relevant": bool}
+    """
+    return {
+        "_id": str(uuid.uuid4()),
+        "benchmark_result_id": benchmark_result_id,
+        "evaluator_id": evaluator_id,
+        "judgments": judgments,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
